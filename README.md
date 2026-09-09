@@ -1,4 +1,4 @@
-# Book Search
+# BookStrap
 
 A small React + TypeScript tool for searching books by title or author using the Open Library API.
 

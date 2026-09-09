@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { searchBooks } from '../services/openLibraryApi'
+import { BOOKS_PER_PAGE, searchBooks } from '../services/openLibraryApi'
 import type { Book } from '../types/book'
 
 const MIN_QUERY_LENGTH = 2
@@ -19,7 +19,14 @@ export function useBookSearch() {
   const [isSearching, setIsSearching] = useState(false)
   const [isSuggesting, setIsSuggesting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
+  const [searchedQuery, setSearchedQuery] = useState('')
+  const [requestQuery, setRequestQuery] = useState('')
+  const [totalResults, setTotalResults] = useState(0)
+  const [page, setPage] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [canLoadMore, setCanLoadMore] = useState(false)
   const mainControllerRef = useRef<AbortController | null>(null)
   const suggestionControllerRef = useRef<AbortController | null>(null)
   const suggestionCacheRef = useRef(new Map<string, Book[]>())
@@ -30,7 +37,7 @@ export function useBookSearch() {
     setIsSuggesting(false)
   }, [])
 
-  const executeSearch = useCallback(async (value: string) => {
+  const executeSearch = useCallback(async (value: string, requestedQuery = value) => {
     const trimmedQuery = value.trim()
     suggestionControllerRef.current?.abort()
     setSuggestions([])
@@ -39,7 +46,14 @@ export function useBookSearch() {
       mainControllerRef.current?.abort()
       setResults([])
       setError(null)
+      setLoadMoreError(null)
+      setTotalResults(0)
+      setPage(0)
+      setCanLoadMore(false)
+      setSearchedQuery('')
+      setRequestQuery('')
       setIsSearching(false)
+      setIsLoadingMore(false)
       setHasSearched(false)
       return
     }
@@ -49,12 +63,21 @@ export function useBookSearch() {
     mainControllerRef.current = controller
     setResults([])
     setIsSearching(true)
+    setIsLoadingMore(false)
     setHasSearched(true)
+    setSearchedQuery(trimmedQuery)
+    setRequestQuery(requestedQuery)
     setError(null)
+    setLoadMoreError(null)
 
     try {
-      const books = await searchBooks(trimmedQuery, controller.signal)
-      if (!controller.signal.aborted) setResults(books)
+      const { books, total } = await searchBooks(requestedQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: 1 })
+      if (!controller.signal.aborted) {
+        setResults(books)
+        setTotalResults(total)
+        setPage(1)
+        setCanLoadMore(books.length > 0 && (total > books.length || (total === 0 && books.length === BOOKS_PER_PAGE)))
+      }
     } catch (requestError) {
       if (isAbortError(requestError)) return
       if (!controller.signal.aborted) setError('We could not load books right now. Please try again.')
@@ -63,10 +86,38 @@ export function useBookSearch() {
     }
   }, [])
 
-  const searchNow = useCallback((value = query) => {
+  const loadMore = useCallback(async () => {
+    if (isSearching || isLoadingMore || !canLoadMore || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
+
+    const controller = new AbortController()
+    const nextPage = page + 1
+    mainControllerRef.current?.abort()
+    mainControllerRef.current = controller
+    setIsLoadingMore(true)
+    setLoadMoreError(null)
+
+    try {
+      const { books, total } = await searchBooks(requestQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: nextPage })
+      if (!controller.signal.aborted) {
+        setResults((currentResults) => {
+          const existingIds = new Set(currentResults.map((book) => book.id))
+          return [...currentResults, ...books.filter((book) => !existingIds.has(book.id))]
+        })
+        setPage(nextPage)
+        setTotalResults(total)
+        setCanLoadMore(books.length > 0 && (total > 0 ? nextPage * BOOKS_PER_PAGE < total : books.length === BOOKS_PER_PAGE))
+      }
+    } catch (requestError) {
+      if (!controller.signal.aborted && !isAbortError(requestError)) setLoadMoreError('Could not load more books.')
+    } finally {
+      if (!controller.signal.aborted) setIsLoadingMore(false)
+    }
+  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, searchedQuery])
+
+  const searchNow = useCallback((value = query, requestedQuery = value) => {
     skipSuggestionRef.current = value.trim() !== query.trim()
     setQuery(value)
-    void executeSearch(value)
+    void executeSearch(value, requestedQuery)
   }, [executeSearch, query])
 
   useEffect(() => {
@@ -97,7 +148,7 @@ export function useBookSearch() {
       setIsSuggesting(true)
 
       try {
-        const books = await searchBooks(trimmedQuery, controller.signal, SUGGESTION_LIMIT)
+        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1 })
         if (!controller.signal.aborted) {
           suggestionCacheRef.current.set(trimmedQuery, books)
           if (suggestionCacheRef.current.size > SUGGESTION_CACHE_SIZE) {
@@ -129,8 +180,13 @@ export function useBookSearch() {
     isSearching,
     isSuggesting,
     error,
+    loadMoreError,
     hasSearched,
+    totalResults,
+    isLoadingMore,
+    canLoadMore: canLoadMore && query.trim() === searchedQuery,
     searchNow,
+    loadMore,
     clearSuggestions,
   }
 }

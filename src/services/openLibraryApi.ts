@@ -1,8 +1,19 @@
 import type { Book } from '../types/book'
 
 const OPEN_LIBRARY_URL = 'https://openlibrary.org/search.json'
-const RESULT_LIMIT = 20
+export const BOOKS_PER_PAGE = 20
 const REQUEST_FIELDS = 'key,title,author_name,first_publish_year,cover_i'
+
+export type BookSearchPage = {
+  books: Book[]
+  total: number
+}
+
+type SearchOptions = {
+  signal?: AbortSignal
+  limit?: number
+  page?: number
+}
 
 type OpenLibraryDocument = Record<string, unknown>
 
@@ -37,10 +48,11 @@ function normalizeBook(document: OpenLibraryDocument, index: number): Book | nul
   }
 }
 
-export async function searchBooks(query: string, signal?: AbortSignal, limit = RESULT_LIMIT): Promise<Book[]> {
+export async function searchBooks(query: string, { signal, limit = BOOKS_PER_PAGE, page = 1 }: SearchOptions = {}): Promise<BookSearchPage> {
   const params = new URLSearchParams({
     q: query,
     limit: String(limit),
+    page: String(page),
     fields: REQUEST_FIELDS,
   })
   const response = await fetch(`${OPEN_LIBRARY_URL}?${params.toString()}`, { signal })
@@ -51,7 +63,11 @@ export async function searchBooks(query: string, signal?: AbortSignal, limit = R
 
   const data: unknown = await response.json()
   const documents = isRecord(data) && Array.isArray(data.docs) ? data.docs.filter(isRecord) : []
-  return documents.map(normalizeBook).filter((book): book is Book => book !== null)
+  const books = documents.map(normalizeBook).filter((book): book is Book => book !== null)
+  const rawTotal = isRecord(data) ? data.numFound ?? data.num_found : null
+  const total = typeof rawTotal === 'number' && Number.isFinite(rawTotal) ? Math.max(0, Math.floor(rawTotal)) : 0
+
+  return { books, total }
 }
 
 export function getCoverUrl(coverId: number | null, size: 'M' | 'L' = 'M'): string | null {

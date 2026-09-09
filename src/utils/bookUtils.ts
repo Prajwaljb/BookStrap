@@ -15,9 +15,13 @@ export function filterBooks(books: Book[], filters: BookFilters): Book[] {
 
   return books.filter((book) => {
     const matchesAuthor = !filters.author || book.authors.includes(filters.author)
-    const matchesMinYear = minYear === null || (book.firstPublishYear !== null && book.firstPublishYear >= minYear)
-    const matchesMaxYear = maxYear === null || (book.firstPublishYear !== null && book.firstPublishYear <= maxYear)
-    return matchesAuthor && matchesMinYear && matchesMaxYear
+    const hasYearFilter = minYear !== null || maxYear !== null
+    const matchesYear = !hasYearFilter || (
+      book.firstPublishYear !== null
+      && (minYear === null || book.firstPublishYear >= minYear)
+      && (maxYear === null || book.firstPublishYear <= maxYear)
+    )
+    return matchesAuthor && matchesYear
   })
 }
 
