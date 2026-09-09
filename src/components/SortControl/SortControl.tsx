@@ -1,4 +1,5 @@
-import { MenuItem, TextField } from '@mui/material'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
 import type { SortOption } from '../../types/book'
 
 export function SortControl({ value, onChange }: { value: SortOption; onChange: (value: SortOption) => void }) {

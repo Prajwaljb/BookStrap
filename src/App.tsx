@@ -1,15 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, Button } from '@mui/material'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
 import { ArrowUpRight } from 'lucide-react'
-import { BookList } from './components/BookList/BookList'
 import { ErrorState } from './components/common/ErrorState'
 import { LoadingState } from './components/common/LoadingState'
-import { FilterPanel } from './components/FilterPanel/FilterPanel'
 import { SearchBar } from './components/SearchBar/SearchBar'
-import { SortControl } from './components/SortControl/SortControl'
 import { useBookSearch } from './hooks/useBookSearch'
 import { filterBooks, getAuthors, sortBooks } from './utils/bookUtils'
 import type { BookFilters, SearchScope, SortOption } from './types/book'
+
+const FilterPanel = lazy(() => import('./components/FilterPanel/FilterPanel').then(({ FilterPanel }) => ({ default: FilterPanel })))
+const SortControl = lazy(() => import('./components/SortControl/SortControl').then(({ SortControl }) => ({ default: SortControl })))
+const BookList = lazy(() => import('./components/BookList/BookList').then(({ BookList }) => ({ default: BookList })))
 
 const EMPTY_FILTERS: BookFilters = { author: '', minYear: '', maxYear: '' }
 const formatCount = (value: number) => new Intl.NumberFormat('en-US').format(value)
@@ -114,15 +116,17 @@ function App() {
 
               {search.error && <ErrorState onRetry={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))} />}
               {search.isSearching ? <LoadingState /> : search.results.length > 0 ? (
-                <div className="grid grid-cols-[205px_minmax(0,1fr)] items-start gap-[26px] max-[700px]:grid-cols-1 max-[700px]:gap-[18px]">
-                  <FilterPanel filters={filters} authors={authorOptions} showAuthorFilter={search.scope === 'book'} onApply={handleFiltersChange} onClear={() => handleFiltersChange(EMPTY_FILTERS)} />
-                  <section className="min-w-0">
-                    <div className="mb-4 flex min-h-10 justify-end gap-4"><SortControl value={sort} onChange={setSort} /></div>
-                    {filteredBooks.length > 0 ? <BookList books={filteredBooks} /> : <Alert severity="info" action={<Button color="inherit" onClick={() => handleFiltersChange(EMPTY_FILTERS)} endIcon={<ArrowUpRight size={14} />}>Reset</Button>}>No titles match these filters.</Alert>}
-                    {search.loadMoreError && <ErrorState message={search.loadMoreError} onRetry={() => search.loadMore()} className="mt-4" />}
-                    {search.canLoadMore && <div className="mt-6 flex justify-center"><Button variant="outlined" onClick={() => search.loadMore()} disabled={search.isLoadingMore} sx={{ color: '#000', borderColor: '#000', borderRadius: '10px', '&:hover': { color: '#fff', backgroundColor: '#000', borderColor: '#000' } }}>{search.isLoadingMore ? 'Loading…' : 'Load more'}</Button></div>}
-                  </section>
-                </div>
+                <Suspense fallback={<LoadingState />}>
+                  <div className="grid grid-cols-[205px_minmax(0,1fr)] items-start gap-[26px] max-[700px]:grid-cols-1 max-[700px]:gap-[18px]">
+                    <FilterPanel filters={filters} authors={authorOptions} showAuthorFilter={search.scope === 'book'} onApply={handleFiltersChange} onClear={() => handleFiltersChange(EMPTY_FILTERS)} />
+                    <section className="min-w-0">
+                      <div className="mb-4 flex min-h-10 justify-end gap-4"><SortControl value={sort} onChange={setSort} /></div>
+                      {filteredBooks.length > 0 ? <BookList books={filteredBooks} /> : <Alert severity="info" action={<Button color="inherit" onClick={() => handleFiltersChange(EMPTY_FILTERS)} endIcon={<ArrowUpRight size={14} />}>Reset</Button>}>No titles match these filters.</Alert>}
+                      {search.loadMoreError && <ErrorState message={search.loadMoreError} onRetry={() => search.loadMore()} className="mt-4" />}
+                      {search.canLoadMore && <div className="mt-6 flex justify-center"><Button variant="outlined" onClick={() => search.loadMore()} disabled={search.isLoadingMore} sx={{ color: '#000', borderColor: '#000', borderRadius: '10px', '&:hover': { color: '#fff', backgroundColor: '#000', borderColor: '#000' } }}>{search.isLoadingMore ? 'Loading…' : 'Load more'}</Button></div>}
+                    </section>
+                  </div>
+                </Suspense>
               ) : !search.error ? <p className="py-6 font-semibold">No books found.</p> : null}
             </section>
           )}

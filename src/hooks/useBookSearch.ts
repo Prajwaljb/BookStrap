@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BOOKS_PER_PAGE, searchBooks } from '../services/openLibraryApi'
+import { BOOKS_PER_PAGE, searchBooks, type BookSearchPage } from '../services/openLibraryApi'
 import type { Book, SearchScope } from '../types/book'
 
 const MIN_QUERY_LENGTH = 2
 const SUGGESTION_LIMIT = 5
 const DEBOUNCE_MS = 180
 const SUGGESTION_CACHE_SIZE = 24
+const SEARCH_CACHE_SIZE = 12
 
 function isAbortError(error: unknown): boolean {
   return (error instanceof DOMException && error.name === 'AbortError')
@@ -22,6 +23,24 @@ function uniqueAuthorSuggestions(books: Book[]): Book[] {
     seenAuthors.add(authorKey)
     return true
   })
+}
+
+function getSearchCacheKey(requestQuery: string, page: number): string {
+  return JSON.stringify([requestQuery, page, BOOKS_PER_PAGE])
+}
+
+function readCachedPage(cache: Map<string, BookSearchPage>, key: string): BookSearchPage | undefined {
+  const cachedPage = cache.get(key)
+  if (!cachedPage) return undefined
+  cache.delete(key)
+  cache.set(key, cachedPage)
+  return cachedPage
+}
+
+function writeCachedPage(cache: Map<string, BookSearchPage>, key: string, page: BookSearchPage): void {
+  cache.delete(key)
+  cache.set(key, page)
+  if (cache.size > SEARCH_CACHE_SIZE) cache.delete(cache.keys().next().value ?? '')
 }
 
 export function useBookSearch() {
@@ -44,6 +63,7 @@ export function useBookSearch() {
   const mainControllerRef = useRef<AbortController | null>(null)
   const suggestionControllerRef = useRef<AbortController | null>(null)
   const suggestionCacheRef = useRef(new Map<string, Book[]>())
+  const searchCacheRef = useRef(new Map<string, BookSearchPage>())
   const skipSuggestionRef = useRef(false)
   const clearSuggestions = useCallback(() => {
     suggestionControllerRef.current?.abort()
@@ -86,13 +106,24 @@ export function useBookSearch() {
     setError(null)
     setLoadMoreError(null)
 
+    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1))
+    if (cachedPage) {
+      setResults(cachedPage.books)
+      setTotalResults(cachedPage.total)
+      setPage(1)
+      setCanLoadMore(cachedPage.books.length > 0 && (cachedPage.total > cachedPage.books.length || (cachedPage.total === 0 && cachedPage.books.length === BOOKS_PER_PAGE)))
+      setIsSearching(false)
+      return
+    }
+
     try {
-      const { books, total } = await searchBooks(requestedQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: 1 })
+      const pageData = await searchBooks(requestedQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: 1 })
       if (!controller.signal.aborted) {
-        setResults(books)
-        setTotalResults(total)
+        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1), pageData)
+        setResults(pageData.books)
+        setTotalResults(pageData.total)
         setPage(1)
-        setCanLoadMore(books.length > 0 && (total > books.length || (total === 0 && books.length === BOOKS_PER_PAGE)))
+        setCanLoadMore(pageData.books.length > 0 && (pageData.total > pageData.books.length || (pageData.total === 0 && pageData.books.length === BOOKS_PER_PAGE)))
       }
     } catch (requestError) {
       if (isAbortError(requestError)) return
@@ -112,16 +143,30 @@ export function useBookSearch() {
     setIsLoadingMore(true)
     setLoadMoreError(null)
 
+    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage))
+    if (cachedPage) {
+      setResults((currentResults) => {
+        const existingIds = new Set(currentResults.map((book) => book.id))
+        return [...currentResults, ...cachedPage.books.filter((book) => !existingIds.has(book.id))]
+      })
+      setPage(nextPage)
+      setTotalResults(cachedPage.total)
+      setCanLoadMore(cachedPage.books.length > 0 && (cachedPage.total > 0 ? nextPage * BOOKS_PER_PAGE < cachedPage.total : cachedPage.books.length === BOOKS_PER_PAGE))
+      setIsLoadingMore(false)
+      return
+    }
+
     try {
-      const { books, total } = await searchBooks(requestQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: nextPage })
+      const pageData = await searchBooks(requestQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: nextPage })
       if (!controller.signal.aborted) {
+        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage), pageData)
         setResults((currentResults) => {
           const existingIds = new Set(currentResults.map((book) => book.id))
-          return [...currentResults, ...books.filter((book) => !existingIds.has(book.id))]
+          return [...currentResults, ...pageData.books.filter((book) => !existingIds.has(book.id))]
         })
         setPage(nextPage)
-        setTotalResults(total)
-        setCanLoadMore(books.length > 0 && (total > 0 ? nextPage * BOOKS_PER_PAGE < total : books.length === BOOKS_PER_PAGE))
+        setTotalResults(pageData.total)
+        setCanLoadMore(pageData.books.length > 0 && (pageData.total > 0 ? nextPage * BOOKS_PER_PAGE < pageData.total : pageData.books.length === BOOKS_PER_PAGE))
       }
     } catch (requestError) {
       if (!controller.signal.aborted && !isAbortError(requestError)) setLoadMoreError('Could not load more books.')

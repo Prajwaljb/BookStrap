@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { Card, CardContent, CardMedia, Chip, Typography } from '@mui/material'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import CardMedia from '@mui/material/CardMedia'
+import Chip from '@mui/material/Chip'
+import Typography from '@mui/material/Typography'
 import { BookOpen } from 'lucide-react'
 import { getCoverUrl } from '../../services/openLibraryApi'
 import type { Book } from '../../types/book'
@@ -11,9 +15,9 @@ export function BookCard({ book }: { book: Book }) {
   const showCover = coverUrl !== null && !coverLoadFailed
 
   return (
-    <Card className="h-full overflow-hidden rounded-[14px] border border-black bg-white transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0_#000]" component="article" elevation={0}>
+    <Card className="h-full overflow-hidden rounded-[14px] border border-black bg-white [contain-intrinsic-size:420px] [content-visibility:auto] transition-transform hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[4px_4px_0_#000]" component="article" elevation={0}>
       {showCover ? (
-        <CardMedia component="img" image={coverUrl} alt={`Cover of ${book.title}`} className="h-[205px] w-full bg-black object-cover object-[center_20%] grayscale contrast-[1.2]" onError={() => setCoverLoadFailed(true)} />
+        <CardMedia component="img" loading="lazy" decoding="async" image={coverUrl} alt={`Cover of ${book.title}`} className="h-[205px] w-full bg-black object-cover object-[center_20%] grayscale contrast-[1.2]" onError={() => setCoverLoadFailed(true)} />
       ) : (
         <div className="grid h-[205px] place-items-center bg-black text-white" aria-label="No cover available"><BookOpen size={34} /></div>
       )}

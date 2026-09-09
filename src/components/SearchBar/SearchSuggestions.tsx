@@ -1,4 +1,9 @@
-import { CircularProgress, List, ListItemButton, ListItemText, Paper, Typography } from '@mui/material'
+import CircularProgress from '@mui/material/CircularProgress'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
 import type { Book, SearchScope } from '../../types/book'
 
 type SearchSuggestionsProps = {
