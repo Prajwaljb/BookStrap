@@ -7,6 +7,7 @@ export type Book = {
 }
 
 export type SortOption = 'relevance' | 'title-asc' | 'title-desc'
+export type SearchScope = 'book' | 'author'
 
 export type BookFilters = {
   author: string

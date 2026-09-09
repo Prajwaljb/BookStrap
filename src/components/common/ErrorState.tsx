@@ -1,5 +1,11 @@
 import { Alert, Button } from '@mui/material'
 
-export function ErrorState({ onRetry }: { onRetry: () => void }) {
-  return <Alert severity="error" action={<Button color="inherit" size="small" onClick={onRetry}>Try again</Button>}>Something went wrong while searching. Please try again.</Alert>
+type ErrorStateProps = {
+  onRetry: () => void
+  message?: string
+  className?: string
+}
+
+export function ErrorState({ onRetry, message = 'Something went wrong while searching.', className = '' }: ErrorStateProps) {
+  return <Alert className={className} severity="error" action={<Button color="inherit" size="small" onClick={onRetry}>Try again</Button>}>{message}</Alert>
 }

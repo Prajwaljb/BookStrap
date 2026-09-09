@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BOOKS_PER_PAGE, searchBooks } from '../services/openLibraryApi'
-import type { Book } from '../types/book'
+import type { Book, SearchScope } from '../types/book'
 
 const MIN_QUERY_LENGTH = 2
 const SUGGESTION_LIMIT = 5
@@ -12,8 +12,21 @@ function isAbortError(error: unknown): boolean {
     || (error instanceof Error && error.name === 'AbortError')
 }
 
+function uniqueAuthorSuggestions(books: Book[]): Book[] {
+  const seenAuthors = new Set<string>()
+  return books.filter((book) => {
+    const author = book.authors[0]?.trim()
+    if (!author) return false
+    const authorKey = author.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (seenAuthors.has(authorKey)) return false
+    seenAuthors.add(authorKey)
+    return true
+  })
+}
+
 export function useBookSearch() {
   const [query, setQuery] = useState('')
+  const [scope, setScope] = useState<SearchScope>('book')
   const [results, setResults] = useState<Book[]>([])
   const [suggestions, setSuggestions] = useState<Book[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -22,6 +35,7 @@ export function useBookSearch() {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [searchedQuery, setSearchedQuery] = useState('')
+  const [searchedScope, setSearchedScope] = useState<SearchScope>('book')
   const [requestQuery, setRequestQuery] = useState('')
   const [totalResults, setTotalResults] = useState(0)
   const [page, setPage] = useState(0)
@@ -51,6 +65,7 @@ export function useBookSearch() {
       setPage(0)
       setCanLoadMore(false)
       setSearchedQuery('')
+      setSearchedScope(scope)
       setRequestQuery('')
       setIsSearching(false)
       setIsLoadingMore(false)
@@ -66,6 +81,7 @@ export function useBookSearch() {
     setIsLoadingMore(false)
     setHasSearched(true)
     setSearchedQuery(trimmedQuery)
+    setSearchedScope(scope)
     setRequestQuery(requestedQuery)
     setError(null)
     setLoadMoreError(null)
@@ -84,10 +100,10 @@ export function useBookSearch() {
     } finally {
       if (!controller.signal.aborted) setIsSearching(false)
     }
-  }, [])
+  }, [scope])
 
   const loadMore = useCallback(async () => {
-    if (isSearching || isLoadingMore || !canLoadMore || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
+    if (isSearching || isLoadingMore || !canLoadMore || scope !== searchedScope || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
 
     const controller = new AbortController()
     const nextPage = page + 1
@@ -112,7 +128,7 @@ export function useBookSearch() {
     } finally {
       if (!controller.signal.aborted) setIsLoadingMore(false)
     }
-  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, searchedQuery])
+  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedQuery, searchedScope])
 
   const searchNow = useCallback((value = query, requestedQuery = value) => {
     skipSuggestionRef.current = value.trim() !== query.trim()
@@ -136,7 +152,8 @@ export function useBookSearch() {
     }
 
     const timer = window.setTimeout(async () => {
-      const cachedSuggestions = suggestionCacheRef.current.get(trimmedQuery)
+      const cacheKey = `${scope}:${trimmedQuery}`
+      const cachedSuggestions = suggestionCacheRef.current.get(cacheKey)
       if (cachedSuggestions) {
         setSuggestions(cachedSuggestions)
         setIsSuggesting(false)
@@ -148,14 +165,15 @@ export function useBookSearch() {
       setIsSuggesting(true)
 
       try {
-        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1 })
+        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope })
         if (!controller.signal.aborted) {
-          suggestionCacheRef.current.set(trimmedQuery, books)
+          const nextSuggestions = scope === 'author' ? uniqueAuthorSuggestions(books) : books
+          suggestionCacheRef.current.set(cacheKey, nextSuggestions)
           if (suggestionCacheRef.current.size > SUGGESTION_CACHE_SIZE) {
             const oldestQuery = suggestionCacheRef.current.keys().next().value
             if (oldestQuery) suggestionCacheRef.current.delete(oldestQuery)
           }
-          setSuggestions(books)
+          setSuggestions(nextSuggestions)
         }
       } catch (requestError) {
         if (!controller.signal.aborted && !isAbortError(requestError)) setSuggestions([])
@@ -165,7 +183,7 @@ export function useBookSearch() {
     }, DEBOUNCE_MS)
 
     return () => window.clearTimeout(timer)
-  }, [query])
+  }, [query, scope])
 
   useEffect(() => () => {
     mainControllerRef.current?.abort()
@@ -175,6 +193,8 @@ export function useBookSearch() {
   return {
     query,
     setQuery,
+    scope,
+    setScope,
     results,
     suggestions,
     isSearching,
@@ -184,7 +204,7 @@ export function useBookSearch() {
     hasSearched,
     totalResults,
     isLoadingMore,
-    canLoadMore: canLoadMore && query.trim() === searchedQuery,
+    canLoadMore: canLoadMore && scope === searchedScope && query.trim() === searchedQuery,
     searchNow,
     loadMore,
     clearSuggestions,

@@ -1,4 +1,4 @@
-import type { Book } from '../types/book'
+import type { Book, SearchScope } from '../types/book'
 
 const OPEN_LIBRARY_URL = 'https://openlibrary.org/search.json'
 export const BOOKS_PER_PAGE = 20
@@ -13,6 +13,7 @@ type SearchOptions = {
   signal?: AbortSignal
   limit?: number
   page?: number
+  scope?: SearchScope
 }
 
 type OpenLibraryDocument = Record<string, unknown>
@@ -48,9 +49,12 @@ function normalizeBook(document: OpenLibraryDocument, index: number): Book | nul
   }
 }
 
-export async function searchBooks(query: string, { signal, limit = BOOKS_PER_PAGE, page = 1 }: SearchOptions = {}): Promise<BookSearchPage> {
+export async function searchBooks(query: string, { signal, limit = BOOKS_PER_PAGE, page = 1, scope }: SearchOptions = {}): Promise<BookSearchPage> {
+  const scopedQuery = scope
+    ? `${scope === 'author' ? 'author' : 'title'}:"${query.replaceAll('"', '\\"')}"`
+    : query
   const params = new URLSearchParams({
-    q: query,
+    q: scopedQuery,
     limit: String(limit),
     page: String(page),
     fields: REQUEST_FIELDS,
