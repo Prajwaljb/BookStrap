@@ -13,6 +13,14 @@ npm run dev
 
 Open the local URL shown by Vite.
 
+## Quality checks
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
 ## Production build
 
 ```bash
@@ -23,7 +31,8 @@ npm run preview
 ## Stack
 
 - React + TypeScript + Vite
-- Tailwind CSS for layout and styling
+- CSS Modules for component styling, with shared design tokens
+- Tailwind CSS tooling available for utility layout work
 - Lucide for icons
 - `react-window` for long result lists
 
@@ -33,7 +42,7 @@ npm run preview
 src/
 ├── App.tsx                         # Page orchestration and search flow
 ├── main.tsx                        # React entry point
-├── index.css                       # Global styles and Tailwind setup
+├── index.css                       # Global styles and font setup
 ├── components/
 │   ├── BookList/                   # Book cards and virtualized results
 │   ├── FilterPanel/                # Author and publication-year filters
@@ -47,5 +56,5 @@ src/
 ├── types/
 │   └── book.ts                     # Shared TypeScript types
 └── utils/
-    └── bookUtils.ts                # Filtering, sorting, and author helpers
+    └── bookUtils.ts                # Filtering and author helpers
 ```
