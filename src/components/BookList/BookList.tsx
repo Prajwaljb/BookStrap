@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Grid } from 'react-window'
 import type { Book } from '../../types/book'
 import { BookCard } from './BookCard'
@@ -31,7 +31,7 @@ function getColumnCount(width: number): number {
   return 3
 }
 
-export function BookList({ books }: { books: Book[] }) {
+export const BookList = memo(function BookList({ books }: { books: Book[] }) {
   const listRef = useRef<HTMLDivElement>(null)
   const [columnCount, setColumnCount] = useState(2)
 
@@ -66,4 +66,4 @@ export function BookList({ books }: { books: Book[] }) {
       />
     </div>
   )
-}
+})

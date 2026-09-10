@@ -7,17 +7,19 @@ import styles from './SearchBar.module.css'
 type SearchBarProps = {
   query: string
   scope: SearchScope
+  hasFullText: boolean
   suggestions: Book[]
   isSuggesting: boolean
   onQueryChange: (value: string) => void
   onScopeChange: (scope: SearchScope) => void
+  onFullTextChange: (value: boolean) => void
   onSearch: () => void
   onSuggestionSelect: (book: Book) => void
   onClear: () => void
   onDismissSuggestions: () => void
 }
 
-export function SearchBar({ query, scope, suggestions, isSuggesting, onQueryChange, onScopeChange, onSearch, onSuggestionSelect, onClear, onDismissSuggestions }: SearchBarProps) {
+export function SearchBar({ query, scope, hasFullText, suggestions, isSuggesting, onQueryChange, onScopeChange, onFullTextChange, onSearch, onSuggestionSelect, onClear, onDismissSuggestions }: SearchBarProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
 
@@ -66,6 +68,10 @@ export function SearchBar({ query, scope, suggestions, isSuggesting, onQueryChan
         <div className={styles.scopeToggle}>
           {(['book', 'author'] as const).map((value) => <button key={value} type="button" className={`${styles.scopeButton} ${scope === value ? styles.scopeButtonActive : ''}`} onClick={() => { if (scope !== value) onScopeChange(value) }} aria-label={`Search ${value === 'book' ? 'book titles' : 'authors'}`}>{value === 'book' ? 'Books' : 'Authors'}</button>)}
         </div>
+        <label className={styles.fullTextToggle}>
+          <input type="checkbox" checked={hasFullText} onChange={(event) => onFullTextChange(event.target.checked)} />
+          <span>Only books with full text</span>
+        </label>
       </div>
       <div className={styles.inputRegion}>
         <div className={styles.inputShell}>

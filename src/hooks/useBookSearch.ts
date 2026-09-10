@@ -12,7 +12,7 @@ function isAbortError(error: unknown): boolean {
     || (error instanceof Error && error.name === 'AbortError')
 }
 
-export function useBookSearch(sort: SortOption) {
+export function useBookSearch(sort: SortOption, hasFullText = false) {
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<SearchScope>('book')
   const [results, setResults] = useState<Book[]>([])
@@ -23,8 +23,10 @@ export function useBookSearch(sort: SortOption) {
   const [searchedQuery, setSearchedQuery] = useState('')
   const [searchedScope, setSearchedScope] = useState<SearchScope>('book')
   const [searchedSort, setSearchedSort] = useState<SortOption>('relevance')
+  const [searchedHasFullText, setSearchedHasFullText] = useState(false)
   const [requestQuery, setRequestQuery] = useState('')
   const [totalResults, setTotalResults] = useState(0)
+  const [availableAuthors, setAvailableAuthors] = useState<string[]>([])
   const [page, setPage] = useState(0)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [canLoadMore, setCanLoadMore] = useState(false)
@@ -32,7 +34,7 @@ export function useBookSearch(sort: SortOption) {
   const searchCacheRef = useRef(new Map<string, Awaited<ReturnType<typeof searchBooks>>>())
   const { suggestions, isSuggesting, clearSuggestions, skipNextSuggestions } = useSuggestions(query, scope)
 
-  const executeSearch = useCallback(async (value: string, requestedQuery = value, requestedSort = sort) => {
+  const executeSearch = useCallback(async (value: string, requestedQuery = value, requestedSort = sort, requestedHasFullText = hasFullText) => {
     const trimmedQuery = value.trim()
     clearSuggestions()
 
@@ -42,11 +44,13 @@ export function useBookSearch(sort: SortOption) {
       setError(null)
       setLoadMoreError(null)
       setTotalResults(0)
+      setAvailableAuthors([])
       setPage(0)
       setCanLoadMore(false)
       setSearchedQuery('')
       setSearchedScope(scope)
       setSearchedSort(requestedSort)
+      setSearchedHasFullText(requestedHasFullText)
       setRequestQuery('')
       setIsSearching(false)
       setIsLoadingMore(false)
@@ -64,15 +68,18 @@ export function useBookSearch(sort: SortOption) {
     setSearchedQuery(trimmedQuery)
     setSearchedScope(scope)
     setSearchedSort(requestedSort)
+    setSearchedHasFullText(requestedHasFullText)
     setRequestQuery(requestedQuery)
     setError(null)
     setLoadMoreError(null)
+    setAvailableAuthors([])
 
-    const cacheKey = getSearchCacheKey(requestedQuery, 1, requestedSort)
+    const cacheKey = getSearchCacheKey(requestedQuery, 1, requestedSort, requestedHasFullText)
     const cachedPage = readCachedPage(searchCacheRef.current, cacheKey)
     if (cachedPage) {
       setResults(cachedPage.books)
       setTotalResults(cachedPage.total)
+      setAvailableAuthors(cachedPage.authors)
       setPage(1)
       setCanLoadMore(cachedPage.books.length > 0 && (cachedPage.total > cachedPage.books.length || (cachedPage.total === 0 && cachedPage.books.length === BOOKS_PER_PAGE)))
       setIsSearching(false)
@@ -80,11 +87,12 @@ export function useBookSearch(sort: SortOption) {
     }
 
     try {
-      const pageData = await fetchSearchPage(requestedQuery, 1, requestedSort, controller.signal)
+      const pageData = await fetchSearchPage(requestedQuery, 1, requestedSort, controller.signal, undefined, requestedHasFullText)
       if (!controller.signal.aborted) {
         writeCachedPage(searchCacheRef.current, cacheKey, pageData)
         setResults(pageData.books)
         setTotalResults(pageData.total)
+        setAvailableAuthors(pageData.authors)
         setPage(1)
         setCanLoadMore(pageData.books.length > 0 && (pageData.total > pageData.books.length || (pageData.total === 0 && pageData.books.length === BOOKS_PER_PAGE)))
       }
@@ -93,7 +101,7 @@ export function useBookSearch(sort: SortOption) {
     } finally {
       if (!controller.signal.aborted) setIsSearching(false)
     }
-  }, [clearSuggestions, scope, sort])
+  }, [clearSuggestions, hasFullText, scope, sort])
 
   const loadMore = useCallback(async () => {
     if (isSearching || isLoadingMore || !canLoadMore || scope !== searchedScope || sort !== searchedSort || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
@@ -105,24 +113,26 @@ export function useBookSearch(sort: SortOption) {
     setIsLoadingMore(true)
     setLoadMoreError(null)
 
-    const cacheKey = getSearchCacheKey(requestQuery, nextPage, sort)
+    const cacheKey = getSearchCacheKey(requestQuery, nextPage, sort, searchedHasFullText)
     const cachedPage = readCachedPage(searchCacheRef.current, cacheKey)
     if (cachedPage) {
       appendUniqueResults(cachedPage.books)
       setPage(nextPage)
       setTotalResults(cachedPage.total)
+      setAvailableAuthors((currentAuthors) => Array.from(new Set([...currentAuthors, ...cachedPage.authors])).sort((a, b) => a.localeCompare(b)))
       setCanLoadMore(cachedPage.books.length > 0 && (cachedPage.total > 0 ? nextPage * BOOKS_PER_PAGE < cachedPage.total : cachedPage.books.length === BOOKS_PER_PAGE))
       setIsLoadingMore(false)
       return
     }
 
     try {
-      const pageData = await fetchSearchPage(requestQuery, nextPage, sort, controller.signal, totalResults)
+      const pageData = await fetchSearchPage(requestQuery, nextPage, sort, controller.signal, totalResults, searchedHasFullText)
       if (!controller.signal.aborted) {
         writeCachedPage(searchCacheRef.current, cacheKey, pageData)
         appendUniqueResults(pageData.books)
         setPage(nextPage)
         setTotalResults(pageData.total)
+        setAvailableAuthors((currentAuthors) => Array.from(new Set([...currentAuthors, ...pageData.authors])).sort((a, b) => a.localeCompare(b)))
         setCanLoadMore(pageData.books.length > 0 && (pageData.total > 0 ? nextPage * BOOKS_PER_PAGE < pageData.total : pageData.books.length === BOOKS_PER_PAGE))
       }
     } catch (requestError) {
@@ -137,13 +147,13 @@ export function useBookSearch(sort: SortOption) {
         return [...currentResults, ...nextBooks.filter((book) => !existingIds.has(book.id))]
       })
     }
-  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedQuery, searchedScope, searchedSort, sort, totalResults])
+  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedHasFullText, searchedQuery, searchedScope, searchedSort, sort, totalResults])
 
-  const searchNow = useCallback((value = query, requestedQuery = value, requestedSort = sort) => {
+  const searchNow = useCallback((value = query, requestedQuery = value, requestedSort = sort, requestedHasFullText = hasFullText) => {
     if (value.trim() !== query.trim()) skipNextSuggestions()
     setQuery(value)
-    void executeSearch(value, requestedQuery, requestedSort)
-  }, [executeSearch, query, skipNextSuggestions, sort])
+    void executeSearch(value, requestedQuery, requestedSort, requestedHasFullText)
+  }, [executeSearch, hasFullText, query, skipNextSuggestions, sort])
 
   useEffect(() => () => mainControllerRef.current?.abort(), [])
 
@@ -160,6 +170,7 @@ export function useBookSearch(sort: SortOption) {
     loadMoreError,
     hasSearched,
     totalResults,
+    availableAuthors,
     isLoadingMore,
     canLoadMore: canLoadMore && scope === searchedScope && sort === searchedSort && query.trim() === searchedQuery,
     searchNow,

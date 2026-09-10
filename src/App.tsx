@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { ErrorState } from './components/common/ErrorState'
 import { LoadingState } from './components/common/LoadingState'
@@ -26,24 +26,22 @@ function buildSearchQuery(query: string, filters: BookFilters, scope: SearchScop
 
 function App() {
   const [sort, setSort] = useState<SortOption>('relevance')
-  const search = useBookSearch(sort)
+  const [hasFullText, setHasFullText] = useState(false)
+  const search = useBookSearch(sort, hasFullText)
   const [filters, setFilters] = useState<BookFilters>(EMPTY_FILTERS)
-  const [authorOptions, setAuthorOptions] = useState<string[]>([])
   const filteredBooks = useMemo(() => filterBooks(search.results, filters), [search.results, filters])
   const currentAuthors = useMemo(() => getAuthors(search.results), [search.results])
+  const authorOptions = useMemo(() => Array.from(new Set([...search.availableAuthors, ...currentAuthors])).sort((a, b) => a.localeCompare(b)), [currentAuthors, search.availableAuthors])
   const hasActiveFilters = Boolean((search.scope === 'book' && filters.author) || filters.minYear || filters.maxYear)
   const resultCount = search.totalResults > search.results.length
     ? `${formatCount(search.results.length)} LOADED / ${formatCount(search.totalResults)} TOTAL`
     : `${formatCount(search.results.length)} LOADED`
 
-  useEffect(() => {
-    if (!filters.author && !search.isSearching) setAuthorOptions(currentAuthors)
-  }, [currentAuthors, filters.author, search.isSearching])
-
   const handleQueryChange = (value: string) => {
     if (!value.trim()) {
       search.searchNow('')
       setFilters(EMPTY_FILTERS)
+      setHasFullText(false)
       return
     }
     if (value.trim() !== search.query.trim() && hasActiveFilters) {
@@ -55,12 +53,21 @@ function App() {
   const handleClear = () => {
     search.searchNow('')
     setFilters(EMPTY_FILTERS)
+    setHasFullText(false)
   }
 
   const handleScopeChange = (scope: SearchScope) => {
     search.setScope(scope)
     setFilters(EMPTY_FILTERS)
+    setHasFullText(false)
     search.searchNow('')
+  }
+
+  const handleFullTextChange = (nextValue: boolean) => {
+    setHasFullText(nextValue)
+    if (search.hasSearched && search.query.trim().length >= 2) {
+      search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope), sort, nextValue)
+    }
   }
 
   const handleFiltersChange = (nextFilters: BookFilters) => {
@@ -90,10 +97,12 @@ function App() {
             <SearchBar
               query={search.query}
               scope={search.scope}
+              hasFullText={hasFullText}
               suggestions={search.suggestions}
               isSuggesting={search.isSuggesting}
               onQueryChange={handleQueryChange}
               onScopeChange={handleScopeChange}
+              onFullTextChange={handleFullTextChange}
               onSearch={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))}
               onSuggestionSelect={(book) => { const value = search.scope === 'author' ? (book.authors[0] ?? book.title) : book.title; setFilters(EMPTY_FILTERS); search.searchNow(value, buildSearchQuery(value, EMPTY_FILTERS, search.scope)) }}
               onClear={handleClear}
@@ -110,7 +119,7 @@ function App() {
               <div className={styles.rule} />
 
               {search.error && <ErrorState onRetry={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))} />}
-              {search.isSearching ? <LoadingState /> : search.results.length > 0 ? (
+              {search.isSearching ? <LoadingState /> : search.results.length > 0 || hasActiveFilters ? (
                 <Suspense fallback={<LoadingState />}>
                   <div className={styles.resultsLayout}>
                     <FilterPanel filters={filters} authors={authorOptions} showAuthorFilter={search.scope === 'book'} onApply={handleFiltersChange} onClear={() => handleFiltersChange(EMPTY_FILTERS)} />

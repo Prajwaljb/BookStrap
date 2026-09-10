@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { BookOpen } from 'lucide-react'
 import { getCoverUrl } from '../../services/openLibraryApi'
 import type { Book } from '../../types/book'
 import styles from './BookCard.module.css'
 
-export function BookCard({ book, stretch = true }: { book: Book; stretch?: boolean }) {
+export const BookCard = memo(function BookCard({ book, stretch = true }: { book: Book; stretch?: boolean }) {
   const coverUrl = getCoverUrl(book.coverId)
   const [coverLoadFailed, setCoverLoadFailed] = useState(false)
   const authorLabel = book.authors.length > 0 ? book.authors.join(', ') : 'Unknown author'
@@ -26,4 +26,4 @@ export function BookCard({ book, stretch = true }: { book: Book; stretch?: boole
       </div>
     </article>
   )
-}
+})
