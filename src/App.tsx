@@ -6,6 +6,7 @@ import { SearchBar } from './components/SearchBar/SearchBar'
 import { useBookSearch } from './hooks/useBookSearch'
 import { filterBooks, getAuthors } from './utils/bookUtils'
 import type { BookFilters, SearchScope, SortOption } from './types/book'
+import styles from './styles/layout.module.css'
 
 const FilterPanel = lazy(() => import('./components/FilterPanel/FilterPanel').then(({ FilterPanel }) => ({ default: FilterPanel })))
 const SortControl = lazy(() => import('./components/SortControl/SortControl').then(({ SortControl }) => ({ default: SortControl })))
@@ -76,16 +77,16 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-black">
-      <main className="min-h-screen">
-        <div className="mx-auto max-w-[1200px] px-6 pb-10 pt-6 max-[900px]:px-6 max-[700px]:px-5 max-[700px]:pt-[18px]">
-          <header className="flex items-center justify-between gap-6 border-b border-black pb-4 font-mono text-[10px] tracking-[.08em]">
+    <div className={styles.page}>
+      <main className={styles.main}>
+        <div className={styles.container}>
+          <header className={styles.header}>
             <span>BOOKSTRAP</span>
-            <span className="whitespace-nowrap">PRAJWAL JB — FERGUSON</span>
+            <span className={styles.name}>PRAJWAL JB — FERGUSON</span>
           </header>
 
-          <section className="max-w-[720px] pb-12 pt-[72px] max-[700px]:pb-10 max-[700px]:pt-14">
-            <h1 className="mb-4 text-[clamp(52px,8vw,78px)] font-extrabold leading-[.95] tracking-[-.085em]">Find a book.</h1>
+          <section className={styles.hero}>
+            <h1 className={styles.title}>Find a book.</h1>
             <SearchBar
               query={search.query}
               scope={search.scope}
@@ -101,27 +102,27 @@ function App() {
           </section>
 
           {search.hasSearched && (
-            <section className="pt-1" aria-label="Search results">
-              <div className="flex items-end justify-between gap-5">
-                <h2 className="m-0 text-2xl font-extrabold leading-none tracking-[-.06em]">Results</h2>
-                {search.results.length > 0 && <span className="mb-0.5 font-mono text-[10px] tracking-[.08em]">{resultCount}</span>}
+            <section className={styles.results} aria-label="Search results">
+              <div className={styles.resultsHeading}>
+                <h2 className={styles.resultsTitle}>Results</h2>
+                {search.results.length > 0 && <span className={styles.resultCount}>{resultCount}</span>}
               </div>
-              <div className="my-[19px] h-px bg-black" />
+              <div className={styles.rule} />
 
               {search.error && <ErrorState onRetry={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))} />}
               {search.isSearching ? <LoadingState /> : search.results.length > 0 ? (
                 <Suspense fallback={<LoadingState />}>
-                  <div className="grid grid-cols-[205px_minmax(0,1fr)] items-start gap-[26px] max-[700px]:grid-cols-1 max-[700px]:gap-[18px]">
+                  <div className={styles.resultsLayout}>
                     <FilterPanel filters={filters} authors={authorOptions} showAuthorFilter={search.scope === 'book'} onApply={handleFiltersChange} onClear={() => handleFiltersChange(EMPTY_FILTERS)} />
-                    <section className="min-w-0">
-                      <div className="mb-4 flex min-h-10 justify-end gap-4"><SortControl value={sort} onChange={handleSortChange} /></div>
-                      {filteredBooks.length > 0 ? <BookList books={filteredBooks} /> : <div className="flex items-center justify-between gap-4 rounded-[12px] border border-black bg-white p-4" role="status"><span>No titles match these filters.</span><button type="button" className="inline-flex items-center gap-1 rounded-[8px] border border-black px-3 py-2 text-sm font-bold hover:bg-black hover:text-white" onClick={() => handleFiltersChange(EMPTY_FILTERS)}>Reset <ArrowUpRight size={14} /></button></div>}
-                      {search.loadMoreError && <ErrorState message={search.loadMoreError} onRetry={() => search.loadMore()} className="mt-4" />}
-                      {search.canLoadMore && <div className="mt-6 flex justify-center"><button type="button" className="rounded-[10px] border border-black px-4 py-2 font-bold hover:bg-black hover:text-white disabled:cursor-wait disabled:opacity-50" onClick={() => search.loadMore()} disabled={search.isLoadingMore}>{search.isLoadingMore ? 'Loading…' : 'Load more'}</button></div>}
+                    <section className={styles.resultsContent}>
+                      <div className={styles.sortRow}><SortControl value={sort} onChange={handleSortChange} /></div>
+                      {filteredBooks.length > 0 ? <BookList books={filteredBooks} /> : <div className={styles.empty} role="status"><span>No titles match these filters.</span><button type="button" className={styles.button} onClick={() => handleFiltersChange(EMPTY_FILTERS)}>Reset <ArrowUpRight size={14} /></button></div>}
+                      {search.loadMoreError && <div className={styles.loadMoreError}><ErrorState message={search.loadMoreError} onRetry={() => search.loadMore()} /></div>}
+                      {search.canLoadMore && <div className={styles.loadMoreRow}><button type="button" className={styles.loadMore} onClick={() => search.loadMore()} disabled={search.isLoadingMore}>{search.isLoadingMore ? 'Loading…' : 'Load more'}</button></div>}
                     </section>
                   </div>
                 </Suspense>
-              ) : !search.error ? <p className="py-6 font-semibold">No books found.</p> : null}
+              ) : !search.error ? <p className={styles.noBooks}>No books found.</p> : null}
             </section>
           )}
         </div>

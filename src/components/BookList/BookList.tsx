@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Grid } from 'react-window'
 import type { Book } from '../../types/book'
 import { BookCard } from './BookCard'
+import styles from './BookList.module.css'
 
 const VIRTUALIZATION_THRESHOLD = 40
 const VIRTUAL_ROW_HEIGHT = 370
@@ -46,12 +47,12 @@ export function BookList({ books }: { books: Book[] }) {
   if (books.length === 0) return null
 
   if (books.length < VIRTUALIZATION_THRESHOLD) {
-    return <div ref={listRef} className="grid gap-4 lg:gap-5" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>{books.map((book) => <BookCard key={book.id} book={book} />)}</div>
+    return <div ref={listRef} className={styles.grid} style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>{books.map((book) => <BookCard key={book.id} book={book} />)}</div>
   }
 
   const rowCount = Math.ceil(books.length / columnCount)
   return (
-    <div ref={listRef} className="w-full" aria-label="Book results">
+    <div ref={listRef} className={styles.virtualList} aria-label="Book results">
       <Grid<VirtualCellProps>
         columnCount={columnCount}
         columnWidth={columnCount === 1 ? '100%' : `${100 / columnCount}%`}

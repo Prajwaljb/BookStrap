@@ -1,0 +1,23 @@
+.panel { border: 1px solid var(--color-black); border-radius: 14px; padding: 16px; background: var(--color-white); }
+.heading { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--color-black); padding-bottom: 16px; }
+.headingText { font: 11px var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+.fields { display: flex; flex-direction: column; gap: 16px; }
+.fieldLabel { position: relative; display: block; font-size: 14px; }
+.labelText { display: block; margin-bottom: 6px; font: 10px var(--font-mono); letter-spacing: .04em; }
+.field { width: 100%; border: 1px solid var(--color-black); border-radius: 10px; padding: 10px 12px; outline: 0; background: var(--color-white); }
+.field:focus { box-shadow: 0 0 0 2px var(--color-black); }
+.selectTrigger { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 1px solid var(--color-black); border-radius: 10px; padding: 10px 12px; text-align: left; background: var(--color-white); cursor: pointer; }
+.selectTrigger:focus { outline: 2px solid var(--color-black); outline-offset: 1px; }
+.chevronOpen { transform: rotate(180deg); }
+.authorMenu { position: absolute; z-index: 20; left: 0; right: 0; max-height: 280px; overflow-y: auto; margin-top: 4px; border: 1px solid var(--color-black); border-radius: 10px; padding: 4px; background: var(--color-white); box-shadow: 3px 3px 0 var(--color-black); }
+.authorOption { display: flex; width: 100%; align-items: center; justify-content: space-between; border: 0; border-radius: 7px; padding: 9px 8px; text-align: left; background: var(--color-white); cursor: pointer; }
+.authorOption:hover, .authorOptionActive { color: var(--color-white); background: var(--color-black); }
+.yearRow { display: flex; align-items: center; gap: 6px; }
+.yearRow .field { min-width: 0; }
+.error { margin: 4px 0 0; color: #b91c1c; font-size: 12px; }
+.hint { margin: 8px 0 0; font: 9px var(--font-mono); }
+.apply { min-height: 38px; width: 100%; border: 0; border-radius: 10px; padding: 8px 12px; color: var(--color-white); background: var(--color-black); font-size: 14px; font-weight: 700; cursor: pointer; }
+.apply:hover { color: var(--color-black); background: var(--color-white); outline: 1px solid var(--color-black); }
+.apply:disabled { cursor: not-allowed; opacity: .5; }
+.reset { display: inline-flex; align-items: center; gap: 4px; border: 0; padding: 0; color: var(--color-black); background: transparent; font: 10px var(--font-mono); cursor: pointer; }
+.reset:hover { text-decoration: underline; }

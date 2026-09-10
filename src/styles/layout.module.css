@@ -1,0 +1,28 @@
+.page { min-height: 100vh; background: var(--color-white); color: var(--color-black); }
+.main { min-height: 100vh; }
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 24px 40px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--color-black); padding-bottom: 16px; font: 10px var(--font-mono); letter-spacing: .08em; }
+.name { white-space: nowrap; }
+.hero { max-width: 720px; padding: 72px 0 48px; }
+.title { margin: 0 0 16px; font-size: clamp(52px, 8vw, 78px); font-weight: 800; line-height: .95; letter-spacing: -.085em; }
+.results { padding-top: 4px; }
+.resultsHeading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.resultsTitle { margin: 0; font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: -.06em; }
+.resultCount { margin-bottom: 2px; font: 10px var(--font-mono); letter-spacing: .08em; }
+.rule { height: 1px; margin: 19px 0; background: var(--color-black); }
+.resultsLayout { display: grid; grid-template-columns: 205px minmax(0, 1fr); align-items: start; gap: 26px; }
+.resultsContent { min-width: 0; }
+.sortRow { display: flex; min-height: 40px; justify-content: flex-end; gap: 16px; margin-bottom: 16px; }
+.empty { display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid var(--color-black); border-radius: var(--radius-md); padding: 16px; }
+.button { border: 1px solid var(--color-black); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; font-weight: 700; background: var(--color-white); cursor: pointer; }
+.button:hover, .loadMore:hover { color: var(--color-white); background: var(--color-black); }
+.loadMoreRow { display: flex; justify-content: center; margin-top: 24px; }
+.loadMoreError { margin-top: 16px; }
+.loadMore { border: 1px solid var(--color-black); border-radius: 10px; padding: 8px 16px; font-weight: 700; background: var(--color-white); cursor: pointer; }
+.loadMore:disabled { cursor: wait; opacity: .5; }
+.noBooks { padding: 24px 0; font-weight: 600; }
+@media (max-width: 700px) {
+  .container { padding: 18px 20px 40px; }
+  .hero { padding: 56px 0 40px; }
+  .resultsLayout { grid-template-columns: 1fr; gap: 18px; }
+}

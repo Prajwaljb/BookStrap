@@ -1,0 +1,3 @@
+.grid { display: grid; gap: 16px; }
+.virtualList { width: 100%; }
+@media (min-width: 1024px) { .grid { gap: 20px; } }
