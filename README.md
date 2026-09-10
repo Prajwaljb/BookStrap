@@ -50,7 +50,10 @@ src/
 │   ├── SortControl/                # Result sorting control
 │   └── common/                     # Loading and error states
 ├── hooks/
-│   └── useBookSearch.ts            # Search state, caching, cancellation, pagination
+│   ├── useBookSearch.ts            # Coordinates search state and public actions
+│   ├── useSuggestions.ts           # Debounced suggestions and suggestion cache
+│   ├── searchResults.ts            # Pagination and server-side sort requests
+│   └── searchCache.ts              # Small LRU page cache
 ├── services/
 │   └── openLibraryApi.ts           # Open Library requests and normalization
 ├── types/
