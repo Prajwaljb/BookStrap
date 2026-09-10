@@ -1,6 +1,5 @@
-import CircularProgress from '@mui/material/CircularProgress'
-import Typography from '@mui/material/Typography'
+import { LoaderCircle } from 'lucide-react'
 
 export function LoadingState() {
-  return <div className="flex min-h-[220px] items-center justify-center gap-3" role="status"><CircularProgress size={24} color="inherit" /><Typography>Loading…</Typography></div>
+  return <div className="flex min-h-[220px] items-center justify-center gap-3" role="status"><LoaderCircle size={24} className="animate-spin" />Loading…</div>
 }

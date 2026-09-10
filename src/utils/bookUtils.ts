@@ -1,13 +1,4 @@
-import type { Book, BookFilters, SortOption } from '../types/book'
-
-export function sortBooks(books: Book[], sort: SortOption): Book[] {
-  if (sort === 'relevance') return books
-
-  return [...books].sort((a, b) => {
-    const comparison = a.title.localeCompare(b.title, undefined, { sensitivity: 'base' })
-    return sort === 'title-asc' ? comparison : -comparison
-  })
-}
+import type { Book, BookFilters } from '../types/book'
 
 export function filterBooks(books: Book[], filters: BookFilters): Book[] {
   const minYear = filters.minYear ? Number(filters.minYear) : null

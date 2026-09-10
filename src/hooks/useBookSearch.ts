@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BOOKS_PER_PAGE, searchBooks, type BookSearchPage } from '../services/openLibraryApi'
-import type { Book, SearchScope } from '../types/book'
+import type { Book, SearchScope, SortOption } from '../types/book'
 
 const MIN_QUERY_LENGTH = 2
 const SUGGESTION_LIMIT = 5
@@ -25,8 +25,24 @@ function uniqueAuthorSuggestions(books: Book[]): Book[] {
   })
 }
 
-function getSearchCacheKey(requestQuery: string, page: number): string {
-  return JSON.stringify([requestQuery, page, BOOKS_PER_PAGE])
+function getSearchCacheKey(requestQuery: string, page: number, sort: SortOption): string {
+  return JSON.stringify([requestQuery, page, sort, BOOKS_PER_PAGE])
+}
+
+async function fetchSearchPage(requestQuery: string, page: number, sort: SortOption, signal: AbortSignal, totalHint?: number): Promise<BookSearchPage> {
+  if (sort !== 'title-desc') return searchBooks(requestQuery, { signal, limit: BOOKS_PER_PAGE, page, sort })
+
+  const firstPage = totalHint === undefined
+    ? await searchBooks(requestQuery, { signal, limit: BOOKS_PER_PAGE, page: 1, sort: 'title-asc' })
+    : null
+  const total = totalHint ?? firstPage?.total ?? 0
+  if (total <= BOOKS_PER_PAGE && firstPage) return { ...firstPage, books: [...firstPage.books].reverse() }
+
+  const endOffset = total - (page - 1) * BOOKS_PER_PAGE
+  const offset = Math.max(0, endOffset - BOOKS_PER_PAGE)
+  const limit = endOffset - offset
+  const pageData = await searchBooks(requestQuery, { signal, limit, offset, sort: 'title-asc' })
+  return { ...pageData, books: [...pageData.books].reverse() }
 }
 
 function readCachedPage(cache: Map<string, BookSearchPage>, key: string): BookSearchPage | undefined {
@@ -43,7 +59,7 @@ function writeCachedPage(cache: Map<string, BookSearchPage>, key: string, page: 
   if (cache.size > SEARCH_CACHE_SIZE) cache.delete(cache.keys().next().value ?? '')
 }
 
-export function useBookSearch() {
+export function useBookSearch(sort: SortOption) {
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<SearchScope>('book')
   const [results, setResults] = useState<Book[]>([])
@@ -55,6 +71,7 @@ export function useBookSearch() {
   const [hasSearched, setHasSearched] = useState(false)
   const [searchedQuery, setSearchedQuery] = useState('')
   const [searchedScope, setSearchedScope] = useState<SearchScope>('book')
+  const [searchedSort, setSearchedSort] = useState<SortOption>('relevance')
   const [requestQuery, setRequestQuery] = useState('')
   const [totalResults, setTotalResults] = useState(0)
   const [page, setPage] = useState(0)
@@ -71,7 +88,7 @@ export function useBookSearch() {
     setIsSuggesting(false)
   }, [])
 
-  const executeSearch = useCallback(async (value: string, requestedQuery = value) => {
+  const executeSearch = useCallback(async (value: string, requestedQuery = value, requestedSort = sort) => {
     const trimmedQuery = value.trim()
     suggestionControllerRef.current?.abort()
     setSuggestions([])
@@ -86,6 +103,7 @@ export function useBookSearch() {
       setCanLoadMore(false)
       setSearchedQuery('')
       setSearchedScope(scope)
+      setSearchedSort(requestedSort)
       setRequestQuery('')
       setIsSearching(false)
       setIsLoadingMore(false)
@@ -102,11 +120,12 @@ export function useBookSearch() {
     setHasSearched(true)
     setSearchedQuery(trimmedQuery)
     setSearchedScope(scope)
+    setSearchedSort(requestedSort)
     setRequestQuery(requestedQuery)
     setError(null)
     setLoadMoreError(null)
 
-    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1))
+    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1, requestedSort))
     if (cachedPage) {
       setResults(cachedPage.books)
       setTotalResults(cachedPage.total)
@@ -117,9 +136,9 @@ export function useBookSearch() {
     }
 
     try {
-      const pageData = await searchBooks(requestedQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: 1 })
+      const pageData = await fetchSearchPage(requestedQuery, 1, requestedSort, controller.signal)
       if (!controller.signal.aborted) {
-        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1), pageData)
+        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestedQuery, 1, requestedSort), pageData)
         setResults(pageData.books)
         setTotalResults(pageData.total)
         setPage(1)
@@ -131,10 +150,10 @@ export function useBookSearch() {
     } finally {
       if (!controller.signal.aborted) setIsSearching(false)
     }
-  }, [scope])
+  }, [scope, sort])
 
   const loadMore = useCallback(async () => {
-    if (isSearching || isLoadingMore || !canLoadMore || scope !== searchedScope || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
+    if (isSearching || isLoadingMore || !canLoadMore || scope !== searchedScope || sort !== searchedSort || query.trim() !== searchedQuery || query.trim().length < MIN_QUERY_LENGTH) return
 
     const controller = new AbortController()
     const nextPage = page + 1
@@ -143,7 +162,7 @@ export function useBookSearch() {
     setIsLoadingMore(true)
     setLoadMoreError(null)
 
-    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage))
+    const cachedPage = readCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage, sort))
     if (cachedPage) {
       setResults((currentResults) => {
         const existingIds = new Set(currentResults.map((book) => book.id))
@@ -157,9 +176,9 @@ export function useBookSearch() {
     }
 
     try {
-      const pageData = await searchBooks(requestQuery, { signal: controller.signal, limit: BOOKS_PER_PAGE, page: nextPage })
+      const pageData = await fetchSearchPage(requestQuery, nextPage, sort, controller.signal, totalResults)
       if (!controller.signal.aborted) {
-        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage), pageData)
+        writeCachedPage(searchCacheRef.current, getSearchCacheKey(requestQuery, nextPage, sort), pageData)
         setResults((currentResults) => {
           const existingIds = new Set(currentResults.map((book) => book.id))
           return [...currentResults, ...pageData.books.filter((book) => !existingIds.has(book.id))]
@@ -173,13 +192,13 @@ export function useBookSearch() {
     } finally {
       if (!controller.signal.aborted) setIsLoadingMore(false)
     }
-  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedQuery, searchedScope])
+  }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedQuery, searchedScope, searchedSort, sort, totalResults])
 
-  const searchNow = useCallback((value = query, requestedQuery = value) => {
+  const searchNow = useCallback((value = query, requestedQuery = value, requestedSort = sort) => {
     skipSuggestionRef.current = value.trim() !== query.trim()
     setQuery(value)
-    void executeSearch(value, requestedQuery)
-  }, [executeSearch, query])
+    void executeSearch(value, requestedQuery, requestedSort)
+  }, [executeSearch, query, sort])
 
   useEffect(() => {
     suggestionControllerRef.current?.abort()
@@ -249,7 +268,7 @@ export function useBookSearch() {
     hasSearched,
     totalResults,
     isLoadingMore,
-    canLoadMore: canLoadMore && scope === searchedScope && query.trim() === searchedQuery,
+    canLoadMore: canLoadMore && scope === searchedScope && sort === searchedSort && query.trim() === searchedQuery,
     searchNow,
     loadMore,
     clearSuggestions,

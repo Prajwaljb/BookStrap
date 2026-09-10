@@ -1,9 +1,4 @@
-import CircularProgress from '@mui/material/CircularProgress'
-import List from '@mui/material/List'
-import ListItemButton from '@mui/material/ListItemButton'
-import ListItemText from '@mui/material/ListItemText'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
+import { LoaderCircle } from 'lucide-react'
 import type { Book, SearchScope } from '../../types/book'
 
 type SearchSuggestionsProps = {
@@ -19,18 +14,16 @@ export function SearchSuggestions({ suggestions, loading, scope, activeIndex, on
   if (!loading && suggestions.length === 0) return null
 
   return (
-    <Paper className="absolute left-0 right-0 top-[68px] z-10 overflow-hidden rounded-[14px] border border-black shadow-[4px_4px_0_#000]" elevation={0} component="div" role="listbox" aria-label={scope === 'author' ? 'Author suggestions' : 'Book suggestions'}>
+    <div className="absolute left-0 right-0 top-[68px] z-10 overflow-hidden rounded-[14px] border border-black bg-white shadow-[4px_4px_0_#000]" role="listbox" aria-label={scope === 'author' ? 'Author suggestions' : 'Book suggestions'}>
       {loading ? (
-        <div className="flex items-center gap-2 p-4"><CircularProgress size={17} color="inherit" /><Typography variant="body2">Finding {scope === 'author' ? 'authors' : 'books'}…</Typography></div>
+        <div className="flex items-center gap-2 p-4 text-sm"><LoaderCircle size={17} className="animate-spin" />Finding {scope === 'author' ? 'authors' : 'books'}…</div>
       ) : (
-        <List disablePadding>
+        <div>
           {suggestions.map((book, index) => (
-            <ListItemButton key={book.id} selected={index === activeIndex} onMouseEnter={() => onActiveChange(index)} onClick={() => onSelect(book)} role="option" aria-selected={index === activeIndex} sx={{ py: 1.25, px: 2, '&.Mui-selected, &:hover': { color: '#fff', backgroundColor: '#000' } }}>
-              <ListItemText primary={scope === 'author' ? (book.authors[0] ?? book.title) : book.title} secondary={scope === 'author' ? undefined : (book.authors.length > 0 ? book.authors.join(', ') : 'Unknown author')} />
-            </ListItemButton>
+            <button key={book.id} type="button" className={`block w-full px-4 py-3 text-left ${index === activeIndex ? 'bg-black text-white' : 'bg-white hover:bg-black hover:text-white'}`} onMouseEnter={() => onActiveChange(index)} onClick={() => onSelect(book)} role="option" aria-selected={index === activeIndex}><span className="block">{scope === 'author' ? (book.authors[0] ?? book.title) : book.title}</span>{scope !== 'author' && <span className="mt-1 block text-sm opacity-80">{book.authors.length > 0 ? book.authors.join(', ') : 'Unknown author'}</span>}</button>
           ))}
-        </List>
+        </div>
       )}
-    </Paper>
+    </div>
   )
 }

@@ -24,7 +24,6 @@ npm run preview
 
 - React + TypeScript + Vite
 - Tailwind CSS for layout and styling
-- MUI for component UI
 - Lucide for icons
 - `react-window` for long result lists
 
@@ -33,7 +32,7 @@ npm run preview
 ```text
 src/
 ├── App.tsx                         # Page orchestration and search flow
-├── main.tsx                        # React entry point and MUI theme
+├── main.tsx                        # React entry point
 ├── index.css                       # Global styles and Tailwind setup
 ├── components/
 │   ├── BookList/                   # Book cards and virtualized results

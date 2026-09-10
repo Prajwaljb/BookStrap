@@ -1,9 +1,4 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from 'react'
-import IconButton from '@mui/material/IconButton'
-import InputAdornment from '@mui/material/InputAdornment'
-import TextField from '@mui/material/TextField'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import { Search, X } from 'lucide-react'
 import type { Book, SearchScope } from '../../types/book'
 import { SearchSuggestions } from './SearchSuggestions'
@@ -67,47 +62,16 @@ export function SearchBar({ query, scope, suggestions, isSuggesting, onQueryChan
     <div ref={wrapperRef} className="relative mt-[18px] max-w-[680px]">
       <div className="mb-3 flex items-center gap-3">
         <span className="font-mono text-[10px] tracking-[.08em]">SEARCH IN</span>
-        <ToggleButtonGroup
-          value={scope}
-          exclusive
-          size="small"
-          onChange={(_, nextScope: SearchScope | null) => { if (nextScope) onScopeChange(nextScope) }}
-          aria-label="Search in"
-          sx={{
-            '& .MuiToggleButton-root': { color: '#000', borderColor: '#000', px: 1.25, py: 0.45, fontSize: 11, lineHeight: 1.2, textTransform: 'none', borderRadius: '8px !important' },
-            '& .MuiToggleButton-root.Mui-selected': { color: '#fff', backgroundColor: '#000' },
-            '& .MuiToggleButton-root.Mui-selected:hover': { color: '#fff', backgroundColor: '#000' },
-          }}
-        >
-          <ToggleButton value="book" aria-label="Search book titles">Books</ToggleButton>
-          <ToggleButton value="author" aria-label="Search authors">Authors</ToggleButton>
-        </ToggleButtonGroup>
+        <div className="flex overflow-hidden rounded-[8px] border border-black text-[11px]">
+          {(['book', 'author'] as const).map((value) => <button key={value} type="button" className={`px-3 py-1 font-medium ${scope === value ? 'bg-black text-white' : 'bg-white text-black hover:bg-black hover:text-white'}`} onClick={() => { if (scope !== value) onScopeChange(value) }} aria-label={`Search ${value === 'book' ? 'book titles' : 'authors'}`}>{value === 'book' ? 'Books' : 'Authors'}</button>)}
+        </div>
       </div>
       <div className="relative">
-        <TextField
-          fullWidth
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          onKeyDown={handleSuggestionKeyDown}
-          placeholder={scope === 'author' ? 'Author name' : 'Book title'}
-          aria-label={scope === 'author' ? 'Search by author' : 'Search by book title'}
-          sx={{
-            '& .MuiOutlinedInput-root': { height: 60, padding: '6px 10px 6px 16px', borderRadius: '15px' },
-            '& .MuiOutlinedInput-notchedOutline': { borderColor: '#000' },
-            '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#000' },
-            '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000', borderWidth: 2 },
-          }}
-          slotProps={{
-            input: {
-              endAdornment: (
-              <InputAdornment position="end">
-                {query && <IconButton aria-label="Clear search" onClick={onClear} size="small"><X size={17} /></IconButton>}
-                <IconButton aria-label={scope === 'author' ? 'Search authors' : 'Search book titles'} onClick={onSearch} sx={{ width: 44, height: 44, color: '#fff', backgroundColor: '#000', borderRadius: '11px', '&:hover': { color: '#000', backgroundColor: '#fff', outline: '1px solid #000' } }}><Search size={20} /></IconButton>
-              </InputAdornment>
-              ),
-            },
-          }}
-        />
+        <div className="flex h-[60px] items-center gap-1 rounded-[15px] border border-black bg-white px-4 focus-within:border-2">
+          <input className="min-w-0 flex-1 bg-transparent outline-none" value={query} onChange={(event) => onQueryChange(event.target.value)} onKeyDown={handleSuggestionKeyDown} placeholder={scope === 'author' ? 'Author name' : 'Book title'} aria-label={scope === 'author' ? 'Search by author' : 'Search by book title'} />
+          {query && <button type="button" className="grid h-8 w-8 place-items-center rounded-full hover:bg-black hover:text-white" aria-label="Clear search" onClick={onClear}><X size={17} /></button>}
+          <button type="button" className="grid h-11 w-11 place-items-center rounded-[11px] bg-black text-white hover:bg-white hover:text-black hover:outline hover:outline-1 hover:outline-black" aria-label={scope === 'author' ? 'Search authors' : 'Search book titles'} onClick={onSearch}><Search size={20} /></button>
+        </div>
         <SearchSuggestions suggestions={suggestions} loading={isSuggesting} scope={scope} activeIndex={activeSuggestionIndex} onActiveChange={setActiveSuggestionIndex} onSelect={(book) => { setActiveSuggestionIndex(-1); onSuggestionSelect(book) }} />
       </div>
     </div>

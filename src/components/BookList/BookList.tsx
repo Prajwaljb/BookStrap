@@ -4,7 +4,7 @@ import type { Book } from '../../types/book'
 import { BookCard } from './BookCard'
 
 const VIRTUALIZATION_THRESHOLD = 40
-const VIRTUAL_ROW_HEIGHT = 420
+const VIRTUAL_ROW_HEIGHT = 370
 
 type VirtualCellProps = {
   books: Book[]
@@ -21,12 +21,12 @@ function VirtualBookCell({ books, columnCount, columnIndex, rowIndex, style }: V
   const book = books[rowIndex * columnCount + columnIndex]
   if (!book) return null
 
-  return <div style={{ ...style, padding: '0 12px 18px 0' }}><BookCard book={book} /></div>
+  return <div style={{ ...style, padding: '0 12px 18px 0' }}><BookCard book={book} stretch={false} /></div>
 }
 
 function getColumnCount(width: number): number {
   if (width < 560) return 1
-  if (width < 900) return 2
+  if (width < 760) return 2
   return 3
 }
 
@@ -46,7 +46,7 @@ export function BookList({ books }: { books: Book[] }) {
   if (books.length === 0) return null
 
   if (books.length < VIRTUALIZATION_THRESHOLD) {
-    return <div ref={listRef} className="grid grid-cols-1 gap-4 min-[560px]:grid-cols-2 min-[900px]:grid-cols-3 lg:gap-5">{books.map((book) => <BookCard key={book.id} book={book} />)}</div>
+    return <div ref={listRef} className="grid gap-4 lg:gap-5" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>{books.map((book) => <BookCard key={book.id} book={book} />)}</div>
   }
 
   const rowCount = Math.ceil(books.length / columnCount)
