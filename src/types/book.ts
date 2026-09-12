@@ -14,3 +14,15 @@ export type BookFilters = {
   minYear: string
   maxYear: string
 }
+
+export type SearchConfig = {
+  sort: SortOption
+  hasFullText: boolean
+}
+
+export type SearchRequest = {
+  value?: string
+  requestQuery?: string
+  sort?: SortOption
+  hasFullText?: boolean
+}

@@ -2,6 +2,10 @@
 @import "tailwindcss";
 @import "./styles/tokens.css";
 
+@theme {
+  --font-mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 :root {
   color: #000;
   background: var(--color-white);

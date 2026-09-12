@@ -35,6 +35,15 @@ describe('searchBooks', () => {
     expect(requestUrl.searchParams.get('has_fulltext')).toBe('true')
   })
 
+  it('allows lightweight field selection for suggestions', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ docs: [], numFound: 0 }), { status: 200 }))
+
+    await searchBooks('books', { fields: 'key,title,author_name', limit: 5 })
+
+    const requestUrl = new URL(fetchMock.mock.calls[0][0] as string)
+    expect(requestUrl.searchParams.get('fields')).toBe('key,title,author_name')
+  })
+
   it('keeps fallback IDs stable across paged responses and trims authors', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       docs: [{ title: 'A Book', author_name: ['  An Author  '] }],

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BOOKS_PER_PAGE, searchBooks } from '../services/openLibraryApi'
-import type { Book, SearchScope, SortOption } from '../types/book'
+import type { Book, SearchConfig, SearchRequest, SearchScope, SortOption } from '../types/book'
 import { readCachedPage, writeCachedPage } from './searchCache'
 import { fetchSearchPage, getSearchCacheKey } from './searchResults'
 import { useSuggestions } from './useSuggestions'
@@ -12,7 +12,7 @@ function isAbortError(error: unknown): boolean {
     || (error instanceof Error && error.name === 'AbortError')
 }
 
-export function useBookSearch(sort: SortOption, hasFullText = false) {
+export function useBookSearch({ sort, hasFullText }: SearchConfig) {
   const [query, setQuery] = useState('')
   const [scope, setScope] = useState<SearchScope>('book')
   const [results, setResults] = useState<Book[]>([])
@@ -34,7 +34,7 @@ export function useBookSearch(sort: SortOption, hasFullText = false) {
   const searchCacheRef = useRef(new Map<string, Awaited<ReturnType<typeof searchBooks>>>())
   const { suggestions, isSuggesting, clearSuggestions, skipNextSuggestions } = useSuggestions(query, scope)
 
-  const executeSearch = useCallback(async (value: string, requestedQuery = value, requestedSort = sort, requestedHasFullText = hasFullText) => {
+  const executeSearch = useCallback(async (value: string, { requestQuery = value, sort: requestedSort = sort, hasFullText: requestedHasFullText = hasFullText }: SearchRequest = {}) => {
     const trimmedQuery = value.trim()
     clearSuggestions()
 
@@ -69,12 +69,12 @@ export function useBookSearch(sort: SortOption, hasFullText = false) {
     setSearchedScope(scope)
     setSearchedSort(requestedSort)
     setSearchedHasFullText(requestedHasFullText)
-    setRequestQuery(requestedQuery)
+    setRequestQuery(requestQuery)
     setError(null)
     setLoadMoreError(null)
     setAvailableAuthors([])
 
-    const cacheKey = getSearchCacheKey(requestedQuery, 1, requestedSort, requestedHasFullText)
+    const cacheKey = getSearchCacheKey(requestQuery, 1, requestedSort, requestedHasFullText)
     const cachedPage = readCachedPage(searchCacheRef.current, cacheKey)
     if (cachedPage) {
       setResults(cachedPage.books)
@@ -87,7 +87,7 @@ export function useBookSearch(sort: SortOption, hasFullText = false) {
     }
 
     try {
-      const pageData = await fetchSearchPage(requestedQuery, 1, requestedSort, controller.signal, undefined, requestedHasFullText)
+      const pageData = await fetchSearchPage(requestQuery, 1, requestedSort, controller.signal, undefined, requestedHasFullText)
       if (!controller.signal.aborted) {
         writeCachedPage(searchCacheRef.current, cacheKey, pageData)
         setResults(pageData.books)
@@ -149,17 +149,25 @@ export function useBookSearch(sort: SortOption, hasFullText = false) {
     }
   }, [canLoadMore, isLoadingMore, isSearching, page, query, requestQuery, scope, searchedHasFullText, searchedQuery, searchedScope, searchedSort, sort, totalResults])
 
-  const searchNow = useCallback((value = query, requestedQuery = value, requestedSort = sort, requestedHasFullText = hasFullText) => {
+  const searchNow = useCallback(({ value = query, ...request }: SearchRequest = {}) => {
     if (value.trim() !== query.trim()) skipNextSuggestions()
     setQuery(value)
-    void executeSearch(value, requestedQuery, requestedSort, requestedHasFullText)
-  }, [executeSearch, hasFullText, query, skipNextSuggestions, sort])
+    void executeSearch(value, request)
+  }, [executeSearch, query, skipNextSuggestions])
+
+  const updateQuery = useCallback((nextQuery: string) => {
+    if (nextQuery !== query) {
+      mainControllerRef.current?.abort()
+      setIsLoadingMore(false)
+    }
+    setQuery(nextQuery)
+  }, [query])
 
   useEffect(() => () => mainControllerRef.current?.abort(), [])
 
   return {
     query,
-    setQuery,
+    setQuery: updateQuery,
     scope,
     setScope,
     results,

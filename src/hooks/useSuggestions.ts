@@ -5,6 +5,7 @@ import type { Book, SearchScope } from '../types/book'
 const SUGGESTION_LIMIT = 5
 const DEBOUNCE_MS = 180
 const SUGGESTION_CACHE_SIZE = 24
+const SUGGESTION_FIELDS = 'key,title,author_name'
 
 function isAbortError(error: unknown): boolean {
   return (error instanceof DOMException && error.name === 'AbortError')
@@ -68,7 +69,7 @@ export function useSuggestions(query: string, scope: SearchScope) {
       setIsSuggesting(true)
 
       try {
-        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope })
+        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope, fields: SUGGESTION_FIELDS })
         if (!controller.signal.aborted) {
           const nextSuggestions = scope === 'author' ? uniqueAuthorSuggestions(books) : books
           cacheRef.current.set(cacheKey, nextSuggestions)

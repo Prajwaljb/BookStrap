@@ -1,6 +1,5 @@
 import { LoaderCircle } from 'lucide-react'
-import styles from './States.module.css'
 
 export function LoadingState() {
-  return <div className={styles.loading} role="status"><LoaderCircle size={24} className={styles.spinner} />Loading…</div>
+  return <div className="flex min-h-[220px] items-center justify-center gap-3" role="status"><LoaderCircle size={24} className="animate-spin" />Loading...</div>
 }

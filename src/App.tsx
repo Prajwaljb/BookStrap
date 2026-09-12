@@ -1,139 +1,55 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
-import { ArrowUpRight } from 'lucide-react'
-import { ErrorState } from './components/common/ErrorState'
-import { LoadingState } from './components/common/LoadingState'
 import { SearchBar } from './components/SearchBar/SearchBar'
-import { useBookSearch } from './hooks/useBookSearch'
-import { filterBooks, getAuthors } from './utils/bookUtils'
-import type { BookFilters, SearchScope, SortOption } from './types/book'
-import styles from './styles/layout.module.css'
-
-const FilterPanel = lazy(() => import('./components/FilterPanel/FilterPanel').then(({ FilterPanel }) => ({ default: FilterPanel })))
-const SortControl = lazy(() => import('./components/SortControl/SortControl').then(({ SortControl }) => ({ default: SortControl })))
-const BookList = lazy(() => import('./components/BookList/BookList').then(({ BookList }) => ({ default: BookList })))
-
-const EMPTY_FILTERS: BookFilters = { author: '', minYear: '', maxYear: '' }
-const formatCount = (value: number) => new Intl.NumberFormat('en-US').format(value)
-
-function buildSearchQuery(query: string, filters: BookFilters, scope: SearchScope): string {
-  const field = scope === 'author' ? 'author' : 'title'
-  const escapedQuery = query.trim().replaceAll('"', '\\"')
-  const terms = [`${field}:"${escapedQuery}"`]
-  if (scope === 'book' && filters.author) terms.push(`author:"${filters.author.replaceAll('"', '\\"')}"`)
-  if (filters.minYear || filters.maxYear) terms.push(`first_publish_year:[${filters.minYear || '*'} TO ${filters.maxYear || '*'}]`)
-  return terms.filter(Boolean).join(' ')
-}
+import { ResultsSection } from './components/ResultsSection/ResultsSection'
+import { useBookSearchController } from './hooks/useBookSearchController'
 
 function App() {
-  const [sort, setSort] = useState<SortOption>('relevance')
-  const [hasFullText, setHasFullText] = useState(false)
-  const search = useBookSearch(sort, hasFullText)
-  const [filters, setFilters] = useState<BookFilters>(EMPTY_FILTERS)
-  const filteredBooks = useMemo(() => filterBooks(search.results, filters), [search.results, filters])
-  const currentAuthors = useMemo(() => getAuthors(search.results), [search.results])
-  const authorOptions = useMemo(() => Array.from(new Set([...search.availableAuthors, ...currentAuthors])).sort((a, b) => a.localeCompare(b)), [currentAuthors, search.availableAuthors])
-  const hasActiveFilters = Boolean((search.scope === 'book' && filters.author) || filters.minYear || filters.maxYear)
-  const resultCount = search.totalResults > search.results.length
-    ? `${formatCount(search.results.length)} LOADED / ${formatCount(search.totalResults)} TOTAL`
-    : `${formatCount(search.results.length)} LOADED`
-
-  const handleQueryChange = (value: string) => {
-    if (!value.trim()) {
-      search.searchNow('')
-      setFilters(EMPTY_FILTERS)
-      setHasFullText(false)
-      return
-    }
-    if (value.trim() !== search.query.trim() && hasActiveFilters) {
-      setFilters(EMPTY_FILTERS)
-    }
-    search.setQuery(value)
-  }
-
-  const handleClear = () => {
-    search.searchNow('')
-    setFilters(EMPTY_FILTERS)
-    setHasFullText(false)
-  }
-
-  const handleScopeChange = (scope: SearchScope) => {
-    search.setScope(scope)
-    setFilters(EMPTY_FILTERS)
-    setHasFullText(false)
-    search.searchNow('')
-  }
-
-  const handleFullTextChange = (nextValue: boolean) => {
-    setHasFullText(nextValue)
-    if (search.hasSearched && search.query.trim().length >= 2) {
-      search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope), sort, nextValue)
-    }
-  }
-
-  const handleFiltersChange = (nextFilters: BookFilters) => {
-    setFilters(nextFilters)
-    if (!search.hasSearched || search.query.trim().length < 2) return
-    search.searchNow(search.query, buildSearchQuery(search.query, nextFilters, search.scope))
-  }
-
-  const handleSortChange = (nextSort: SortOption) => {
-    setSort(nextSort)
-    if (search.hasSearched && search.query.trim().length >= 2) {
-      search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope), nextSort)
-    }
-  }
+  const search = useBookSearchController()
 
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <div className={styles.container}>
-          <header className={styles.header}>
+    <div className="min-h-screen bg-[var(--color-white)] text-[var(--color-black)]">
+      <main className="min-h-screen">
+        <div className="mx-auto max-w-[1200px] px-5 pb-10 pt-[18px] min-[701px]:px-6 min-[701px]:pt-6">
+          <header className="flex items-center justify-between gap-6 border-b border-[var(--color-black)] pb-4 font-mono text-[10px] tracking-[0.08em]">
             <span>BOOKSTRAP</span>
-            <span className={styles.name}>PRAJWAL JB — FERGUSON</span>
+            <span className="whitespace-nowrap">PRAJWAL JB — FERGUSON</span>
           </header>
 
-          <section className={styles.hero}>
-            <h1 className={styles.title}>Find a book.</h1>
+          <section className="max-w-[720px] py-14 min-[701px]:pb-12 min-[701px]:pt-[72px]">
+            <h1 className="m-0 mb-4 text-[clamp(52px,8vw,78px)] font-extrabold leading-[0.95] tracking-[-0.085em]">Find a book.</h1>
             <SearchBar
               query={search.query}
               scope={search.scope}
-              hasFullText={hasFullText}
+              hasFullText={search.hasFullText}
               suggestions={search.suggestions}
               isSuggesting={search.isSuggesting}
-              onQueryChange={handleQueryChange}
-              onScopeChange={handleScopeChange}
-              onFullTextChange={handleFullTextChange}
-              onSearch={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))}
-              onSuggestionSelect={(book) => { const value = search.scope === 'author' ? (book.authors[0] ?? book.title) : book.title; setFilters(EMPTY_FILTERS); search.searchNow(value, buildSearchQuery(value, EMPTY_FILTERS, search.scope)) }}
-              onClear={handleClear}
+              onQueryChange={search.handleQueryChange}
+              onScopeChange={search.handleScopeChange}
+              onFullTextChange={search.handleFullTextChange}
+              onSearch={search.handleSearch}
+              onSuggestionSelect={search.handleSuggestionSelect}
+              onClear={search.handleClear}
               onDismissSuggestions={search.clearSuggestions}
             />
           </section>
 
-          {search.hasSearched && (
-            <section className={styles.results} aria-label="Search results">
-              <div className={styles.resultsHeading}>
-                <h2 className={styles.resultsTitle}>Results</h2>
-                {search.results.length > 0 && <span className={styles.resultCount}>{resultCount}</span>}
-              </div>
-              <div className={styles.rule} />
-
-              {search.error && <ErrorState onRetry={() => search.searchNow(search.query, buildSearchQuery(search.query, filters, search.scope))} />}
-              {search.isSearching ? <LoadingState /> : search.results.length > 0 || hasActiveFilters ? (
-                <Suspense fallback={<LoadingState />}>
-                  <div className={styles.resultsLayout}>
-                    <FilterPanel filters={filters} authors={authorOptions} showAuthorFilter={search.scope === 'book'} onApply={handleFiltersChange} onClear={() => handleFiltersChange(EMPTY_FILTERS)} />
-                    <section className={styles.resultsContent}>
-                      <div className={styles.sortRow}><SortControl value={sort} onChange={handleSortChange} /></div>
-                      {filteredBooks.length > 0 ? <BookList books={filteredBooks} /> : <div className={styles.empty} role="status"><span>No titles match these filters.</span><button type="button" className={styles.button} onClick={() => handleFiltersChange(EMPTY_FILTERS)}>Reset <ArrowUpRight size={14} /></button></div>}
-                      {search.loadMoreError && <div className={styles.loadMoreError}><ErrorState message={search.loadMoreError} onRetry={() => search.loadMore()} /></div>}
-                      {search.canLoadMore && <div className={styles.loadMoreRow}><button type="button" className={styles.loadMore} onClick={() => search.loadMore()} disabled={search.isLoadingMore}>{search.isLoadingMore ? 'Loading…' : 'Load more'}</button></div>}
-                    </section>
-                  </div>
-                </Suspense>
-              ) : !search.error ? <p className={styles.noBooks}>No books found.</p> : null}
-            </section>
-          )}
+          <ResultsSection
+            results={search.results}
+            filters={search.filters}
+            availableAuthors={search.availableAuthors}
+            scope={search.scope}
+            sort={search.sort}
+            totalResults={search.totalResults}
+            hasSearched={search.hasSearched}
+            isSearching={search.isSearching}
+            error={search.error}
+            loadMoreError={search.loadMoreError}
+            canLoadMore={search.canLoadMore}
+            isLoadingMore={search.isLoadingMore}
+            onRetry={search.retry}
+            onFiltersChange={search.handleFiltersChange}
+            onSortChange={search.handleSortChange}
+            onLoadMore={search.loadMore}
+          />
         </div>
       </main>
     </div>

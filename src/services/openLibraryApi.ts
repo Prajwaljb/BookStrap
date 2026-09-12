@@ -18,6 +18,7 @@ type SearchOptions = {
   scope?: SearchScope
   sort?: SortOption
   hasFullText?: boolean
+  fields?: string
 }
 
 type OpenLibraryDocument = Record<string, unknown>
@@ -63,14 +64,14 @@ function normalizeBook(document: OpenLibraryDocument, fallbackIndex: number): Bo
   }
 }
 
-export async function searchBooks(query: string, { signal, limit = BOOKS_PER_PAGE, page = 1, offset, scope, sort = 'relevance', hasFullText = false }: SearchOptions = {}): Promise<BookSearchPage> {
+export async function searchBooks(query: string, { signal, limit = BOOKS_PER_PAGE, page = 1, offset, scope, sort = 'relevance', hasFullText = false, fields = REQUEST_FIELDS }: SearchOptions = {}): Promise<BookSearchPage> {
   const scopedQuery = scope
     ? `${scope === 'author' ? 'author' : 'title'}:"${query.replaceAll('"', '\\"')}"`
     : query
   const params = new URLSearchParams({
     q: scopedQuery,
     limit: String(limit),
-    fields: REQUEST_FIELDS,
+    fields,
   })
   if (hasFullText) params.set('has_fulltext', 'true')
   params.set(offset === undefined ? 'page' : 'offset', String(offset ?? page))

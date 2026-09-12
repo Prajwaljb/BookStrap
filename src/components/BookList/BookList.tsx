@@ -1,10 +1,8 @@
-import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { Grid } from 'react-window'
+import { memo, useEffect, useRef, useState } from 'react'
+import { Grid, type CellComponentProps } from 'react-window'
 import type { Book } from '../../types/book'
 import { BookCard } from './BookCard'
-import styles from './BookList.module.css'
 
-const VIRTUALIZATION_THRESHOLD = 40
 const VIRTUAL_ROW_HEIGHT = 370
 
 type VirtualCellProps = {
@@ -12,17 +10,13 @@ type VirtualCellProps = {
   columnCount: number
 }
 
-type VirtualCellRenderProps = VirtualCellProps & {
-  columnIndex: number
-  rowIndex: number
-  style: CSSProperties
-}
+type VirtualCellRenderProps = CellComponentProps<VirtualCellProps>
 
-function VirtualBookCell({ books, columnCount, columnIndex, rowIndex, style }: VirtualCellRenderProps) {
+function VirtualBookCell({ ariaAttributes, books, columnCount, columnIndex, rowIndex, style }: VirtualCellRenderProps) {
   const book = books[rowIndex * columnCount + columnIndex]
   if (!book) return null
 
-  return <div style={{ ...style, padding: '0 12px 18px 0' }}><BookCard book={book} stretch={false} /></div>
+  return <div {...ariaAttributes} style={{ ...style, padding: '0 12px 18px 0' }}><BookCard book={book} stretch={false} /></div>
 }
 
 function getColumnCount(width: number): number {
@@ -46,13 +40,9 @@ export const BookList = memo(function BookList({ books }: { books: Book[] }) {
 
   if (books.length === 0) return null
 
-  if (books.length < VIRTUALIZATION_THRESHOLD) {
-    return <div ref={listRef} className={styles.grid} style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>{books.map((book) => <BookCard key={book.id} book={book} />)}</div>
-  }
-
   const rowCount = Math.ceil(books.length / columnCount)
   return (
-    <div ref={listRef} className={styles.virtualList} aria-label="Book results">
+    <div ref={listRef} className="w-full" aria-label="Book results">
       <Grid<VirtualCellProps>
         columnCount={columnCount}
         columnWidth={columnCount === 1 ? '100%' : `${100 / columnCount}%`}
