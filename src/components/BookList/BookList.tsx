@@ -3,7 +3,9 @@ import { Grid, type CellComponentProps } from 'react-window'
 import type { Book } from '../../types/book'
 import { BookCard } from './BookCard'
 
-const VIRTUAL_ROW_HEIGHT = 370
+const VIRTUAL_ROW_HEIGHT = 410
+const VIRTUAL_VIEWPORT_ROWS = 2
+const VIRTUAL_VIEWPORT_HEIGHT = VIRTUAL_ROW_HEIGHT * VIRTUAL_VIEWPORT_ROWS
 
 type VirtualCellProps = {
   books: Book[]
@@ -46,13 +48,13 @@ export const BookList = memo(function BookList({ books }: { books: Book[] }) {
       <Grid<VirtualCellProps>
         columnCount={columnCount}
         columnWidth={columnCount === 1 ? '100%' : `${100 / columnCount}%`}
-        defaultHeight={720}
+        defaultHeight={VIRTUAL_VIEWPORT_HEIGHT}
         rowCount={rowCount}
         rowHeight={VIRTUAL_ROW_HEIGHT}
         overscanCount={2}
         cellComponent={VirtualBookCell}
         cellProps={{ books, columnCount }}
-        style={{ width: '100%', height: '720px' }}
+        style={{ width: '100%', height: `${VIRTUAL_VIEWPORT_HEIGHT}px` }}
       />
     </div>
   )
