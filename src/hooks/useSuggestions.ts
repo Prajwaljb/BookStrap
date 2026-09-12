@@ -43,17 +43,20 @@ export function useSuggestions(query: string, scope: SearchScope) {
 
   useEffect(() => {
     controllerRef.current?.abort()
-    setIsSuggesting(false)
     const trimmedQuery = query.trim()
     if (skipNextRef.current) {
       skipNextRef.current = false
       setSuggestions([])
+      setIsSuggesting(false)
       return
     }
     if (trimmedQuery.length < 2) {
       setSuggestions([])
+      setIsSuggesting(false)
       return
     }
+
+    setIsSuggesting(true)
 
     const timer = window.setTimeout(async () => {
       const cacheKey = `${scope}:${trimmedQuery}`
@@ -69,7 +72,7 @@ export function useSuggestions(query: string, scope: SearchScope) {
       setIsSuggesting(true)
 
       try {
-        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope, fields: SUGGESTION_FIELDS })
+        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope, fields: SUGGESTION_FIELDS, mode: 'suggestion' })
         if (!controller.signal.aborted) {
           const nextSuggestions = scope === 'author' ? uniqueAuthorSuggestions(books) : books
           cacheRef.current.set(cacheKey, nextSuggestions)

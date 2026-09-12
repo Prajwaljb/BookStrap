@@ -158,6 +158,7 @@ export function useBookSearch({ sort, hasFullText }: SearchConfig) {
   const updateQuery = useCallback((nextQuery: string) => {
     if (nextQuery !== query) {
       mainControllerRef.current?.abort()
+      setIsSearching(false)
       setIsLoadingMore(false)
     }
     setQuery(nextQuery)

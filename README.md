@@ -31,8 +31,7 @@ npm run preview
 ## Stack
 
 - React + TypeScript + Vite
-- CSS Modules for component styling, with shared design tokens
-- Tailwind CSS tooling available for utility layout work
+- Tailwind CSS v4 utility classes, with shared design tokens
 - Lucide for icons
 - `react-window` for long result lists
 
