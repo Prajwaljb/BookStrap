@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title>BookStrap</title>
+  <rect width="64" height="64" rx="14" fill="#000"/>
+  <path d="M18 14h21c4.4 0 7 2.6 7 7v29c-1.7-1.5-3.8-2.3-6.5-2.3H18c-2.2 0-4 1.8-4 4V18c0-2.2 1.8-4 4-4Z" fill="#fff"/>
+  <path d="M20 22h18M20 29h18M20 36h13" fill="none" stroke="#000" stroke-linecap="round" stroke-width="3"/>
+</svg>
