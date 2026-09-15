@@ -72,7 +72,7 @@ export function useSuggestions(query: string, scope: SearchScope) {
       setIsSuggesting(true)
 
       try {
-        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope, fields: SUGGESTION_FIELDS, mode: 'suggestion' })
+        const { books } = await searchBooks(trimmedQuery, { signal: controller.signal, limit: SUGGESTION_LIMIT, page: 1, scope, fields: SUGGESTION_FIELDS })
         if (!controller.signal.aborted) {
           const nextSuggestions = scope === 'author' ? uniqueAuthorSuggestions(books) : books
           cacheRef.current.set(cacheKey, nextSuggestions)

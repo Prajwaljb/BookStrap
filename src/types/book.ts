@@ -22,6 +22,7 @@ export type SearchConfig = {
 
 export type SearchRequest = {
   value?: string
+  scope?: SearchScope
   requestQuery?: string
   sort?: SortOption
   hasFullText?: boolean

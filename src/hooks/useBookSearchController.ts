@@ -4,6 +4,11 @@ import type { Book, BookFilters, SearchScope, SortOption } from '../types/book'
 
 export const EMPTY_FILTERS: BookFilters = { author: '', minYear: '', maxYear: '' }
 
+export function shouldAutoSearchOnScopeChange({ hasSearched, query, currentScope, nextScope }: { hasSearched: boolean; query: string; currentScope: SearchScope; nextScope: SearchScope }) {
+  if (!hasSearched || currentScope === nextScope) return false
+  return query.trim().length >= 2
+}
+
 function buildSearchQuery(query: string, filters: BookFilters, scope: SearchScope): string {
   const field = scope === 'author' ? 'author' : 'title'
   const escapedQuery = query.trim().replaceAll('"', '\\"')
@@ -18,7 +23,7 @@ export function useBookSearchController() {
   const [hasFullText, setHasFullText] = useState(true)
   const [filters, setFilters] = useState<BookFilters>(EMPTY_FILTERS)
   const search = useBookSearch({ sort, hasFullText })
-  const { hasSearched, query, scope, searchNow, setQuery, setScope } = search
+  const { hasSearched, query, scope, searchNow, setQuery, setScope, clearSuggestions, skipNextSuggestions } = search
 
   const runSearch = useCallback((value: string, options: { sort?: SortOption; hasFullText?: boolean; filters?: BookFilters } = {}) => {
     const nextFilters = options.filters ?? filters
@@ -47,12 +52,27 @@ export function useBookSearchController() {
     setHasFullText(true)
   }, [searchNow])
 
-  const handleScopeChange = useCallback((scope: SearchScope) => {
-    setScope(scope)
+  const handleScopeChange = useCallback((nextScope: SearchScope) => {
+    const shouldAutoSearch = shouldAutoSearchOnScopeChange({ hasSearched, query, currentScope: scope, nextScope })
+
+    if (hasSearched) {
+      skipNextSuggestions()
+      clearSuggestions()
+    }
+
+    setScope(nextScope)
     setFilters(EMPTY_FILTERS)
     setHasFullText(true)
-    searchNow({ value: '' })
-  }, [searchNow, setScope])
+
+    if (!shouldAutoSearch) return
+
+    searchNow({
+      value: query,
+      scope: nextScope,
+      requestQuery: buildSearchQuery(query, EMPTY_FILTERS, nextScope),
+      hasFullText: true,
+    })
+  }, [clearSuggestions, hasSearched, query, scope, searchNow, setScope, skipNextSuggestions])
 
   const handleFullTextChange = useCallback((nextValue: boolean) => {
     setHasFullText(nextValue)

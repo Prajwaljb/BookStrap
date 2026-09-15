@@ -44,13 +44,13 @@ describe('searchBooks', () => {
     expect(requestUrl.searchParams.get('fields')).toBe('key,title,author_name')
   })
 
-  it('uses a broad query mode for partial suggestions', async () => {
+  it('keeps suggestion requests scoped to the active search mode', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ docs: [], numFound: 0 }), { status: 200 }))
 
-    await searchBooks('Enid Bly', { scope: 'book', mode: 'suggestion' })
+    await searchBooks('Enid Bly', { scope: 'author' })
 
     const requestUrl = new URL(fetchMock.mock.calls[0][0] as string)
-    expect(requestUrl.searchParams.get('q')).toBe('Enid Bly')
+    expect(requestUrl.searchParams.get('q')).toBe('author:"Enid Bly"')
   })
 
   it('keeps fallback IDs stable across paged responses and trims authors', async () => {

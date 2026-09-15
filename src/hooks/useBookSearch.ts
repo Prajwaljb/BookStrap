@@ -34,7 +34,7 @@ export function useBookSearch({ sort, hasFullText }: SearchConfig) {
   const searchCacheRef = useRef(new Map<string, Awaited<ReturnType<typeof searchBooks>>>())
   const { suggestions, isSuggesting, clearSuggestions, skipNextSuggestions } = useSuggestions(query, scope)
 
-  const executeSearch = useCallback(async (value: string, { requestQuery = value, sort: requestedSort = sort, hasFullText: requestedHasFullText = hasFullText }: SearchRequest = {}) => {
+  const executeSearch = useCallback(async (value: string, { scope: requestedScope = scope, requestQuery = value, sort: requestedSort = sort, hasFullText: requestedHasFullText = hasFullText }: SearchRequest = {}) => {
     const trimmedQuery = value.trim()
     clearSuggestions()
 
@@ -48,7 +48,7 @@ export function useBookSearch({ sort, hasFullText }: SearchConfig) {
       setPage(0)
       setCanLoadMore(false)
       setSearchedQuery('')
-      setSearchedScope(scope)
+      setSearchedScope(requestedScope)
       setSearchedSort(requestedSort)
       setSearchedHasFullText(requestedHasFullText)
       setRequestQuery('')
@@ -66,7 +66,7 @@ export function useBookSearch({ sort, hasFullText }: SearchConfig) {
     setIsLoadingMore(false)
     setHasSearched(true)
     setSearchedQuery(trimmedQuery)
-    setSearchedScope(scope)
+    setSearchedScope(requestedScope)
     setSearchedSort(requestedSort)
     setSearchedHasFullText(requestedHasFullText)
     setRequestQuery(requestQuery)
@@ -185,5 +185,6 @@ export function useBookSearch({ sort, hasFullText }: SearchConfig) {
     searchNow,
     loadMore,
     clearSuggestions,
+    skipNextSuggestions,
   }
 }
