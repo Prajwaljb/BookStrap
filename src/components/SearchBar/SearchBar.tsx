@@ -22,6 +22,9 @@ type SearchBarProps = {
 export function SearchBar({ query, scope, hasFullText, suggestions, isSuggesting, onQueryChange, onScopeChange, onFullTextChange, onSearch, onSuggestionSelect, onClear, onDismissSuggestions }: SearchBarProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
+  const suggestionsId = 'book-search-suggestions'
+  const activeSuggestionId = activeSuggestionIndex >= 0 ? `book-search-suggestion-${activeSuggestionIndex}` : undefined
+  const suggestionsOpen = isSuggesting || suggestions.length > 0
 
   useEffect(() => setActiveSuggestionIndex(-1), [suggestions, scope])
 
@@ -75,11 +78,11 @@ export function SearchBar({ query, scope, hasFullText, suggestions, isSuggesting
       </div>
       <div className="relative">
         <div className="flex h-[60px] items-center gap-1 rounded-[15px] border border-[var(--color-black)] bg-[var(--color-white)] px-4 focus-within:border-2">
-          <input className="min-w-0 flex-1 border-0 bg-transparent outline-0" value={query} onChange={(event) => onQueryChange(event.target.value)} onKeyDown={handleSuggestionKeyDown} placeholder={scope === 'author' ? 'Author name' : 'Book title'} aria-label={scope === 'author' ? 'Search by author' : 'Search by book title'} />
+          <input className="min-w-0 flex-1 border-0 bg-transparent outline-0" value={query} onChange={(event) => onQueryChange(event.target.value)} onKeyDown={handleSuggestionKeyDown} placeholder={scope === 'author' ? 'Author name' : 'Book title'} aria-label={scope === 'author' ? 'Search by author' : 'Search by book title'} role="combobox" aria-autocomplete="list" aria-expanded={suggestionsOpen} aria-controls={suggestionsId} aria-activedescendant={activeSuggestionId} />
           {query && <button type="button" className="grid h-8 w-8 cursor-pointer place-items-center rounded-full border-0 bg-transparent hover:bg-[var(--color-black)] hover:text-[var(--color-white)]" aria-label="Clear search" onClick={onClear}><X size={17} /></button>}
           <button type="button" className="grid h-11 w-11 cursor-pointer place-items-center rounded-[11px] border-0 bg-[var(--color-black)] text-[var(--color-white)] hover:bg-[var(--color-white)] hover:text-[var(--color-black)] hover:outline hover:outline-1 hover:outline-[var(--color-black)]" aria-label={scope === 'author' ? 'Search authors' : 'Search book titles'} onClick={onSearch}><Search size={20} /></button>
         </div>
-        <SearchSuggestions suggestions={suggestions} loading={isSuggesting} scope={scope} activeIndex={activeSuggestionIndex} onActiveChange={setActiveSuggestionIndex} onSelect={(book) => { setActiveSuggestionIndex(-1); onSuggestionSelect(book) }} />
+        <SearchSuggestions id={suggestionsId} suggestions={suggestions} loading={isSuggesting} scope={scope} activeIndex={activeSuggestionIndex} onActiveChange={setActiveSuggestionIndex} onSelect={(book) => { setActiveSuggestionIndex(-1); onSuggestionSelect(book) }} />
       </div>
     </div>
   )
